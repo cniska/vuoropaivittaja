@@ -111,8 +111,9 @@ testRuleButton.addEventListener("click", async () => {
   };
 
   try {
-    const response = await sendToActiveTab({
-      type: "test-rule",
+    const response = await chrome.runtime.sendMessage({
+      type: "test-rule-in-tab",
+      tabId: activeTab.id,
       rule
     });
     setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
@@ -174,8 +175,9 @@ function renderRules() {
       }
 
       try {
-        const response = await sendToActiveTab({
-          type: "test-rule",
+        const response = await chrome.runtime.sendMessage({
+          type: "test-rule-in-tab",
+          tabId: activeTab.id,
           rule
         });
         setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
@@ -297,12 +299,18 @@ async function loadPickedElement() {
   }
 
   selectorInput.value = picked.selector;
-  if (!urlPatternInput.value && activeTab?.url) {
+  if (typeof picked.url === "string" && picked.url) {
+    urlPatternInput.value = defaultPatternFor(picked.url);
+  } else if (!urlPatternInput.value && activeTab?.url) {
     urlPatternInput.value = defaultPatternFor(activeTab.url);
   }
 
   await chrome.storage.local.remove(PICK_RESULT_KEY);
-  setStatus(`Filled selector from page pick: ${picked.selector}`);
+  setStatus(
+    typeof picked.url === "string" && picked.url
+      ? `Filled selector from picked frame: ${defaultPatternFor(picked.url)}`
+      : `Filled selector from page pick: ${picked.selector}`
+  );
 }
 
 async function sendToActiveTab(message) {

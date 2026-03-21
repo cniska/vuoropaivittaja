@@ -1,13 +1,21 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type !== "activate-sender-tab") {
-    return false;
+  if (message?.type === "activate-sender-tab") {
+    void activateSenderTab(sender)
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+
+    return true;
   }
 
-  void activateSenderTab(sender)
-    .then(() => sendResponse({ ok: true }))
-    .catch((error) => sendResponse({ ok: false, error: error.message }));
+  if (message?.type === "test-rule-in-tab") {
+    void testRuleInTab(message.tabId, message.rule)
+      .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
 
-  return true;
+    return true;
+  }
+
+  return false;
 });
 
 async function activateSenderTab(sender) {
@@ -20,4 +28,139 @@ async function activateSenderTab(sender) {
   }
 
   await chrome.tabs.update(sender.tab.id, { active: true });
+}
+
+async function testRuleInTab(tabId, rule) {
+  if (typeof tabId !== "number") {
+    throw new Error("No target tab available.");
+  }
+
+  const injectionResults = await chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: testRuleInFrame,
+    args: [rule]
+  });
+
+  const frameResults = injectionResults.map((entry) => entry.result).filter(Boolean);
+  const clickedFrame = frameResults.find((entry) => entry.clicked);
+  if (clickedFrame) {
+    return {
+      ok: true,
+      message: `Clicked the matching element in ${clickedFrame.frameUrl}.`
+    };
+  }
+
+  const matchedFrame = frameResults.find((entry) => entry.urlMatched);
+  if (matchedFrame) {
+    return {
+      ok: false,
+      error: matchedFrame.message || "The selector was not found in the matching frame."
+    };
+  }
+
+  return {
+    ok: false,
+    error: "This rule does not match the current page or embedded app frame."
+  };
+}
+
+function testRuleInFrame(rule) {
+  const urlPattern = String(rule?.urlPattern || "").trim().toLowerCase();
+  const selector = String(rule?.selector || "").trim();
+
+  if (!urlPattern || !selector) {
+    return {
+      frameUrl: location.href,
+      urlMatched: false,
+      clicked: false,
+      message: "URL pattern and selector are required."
+    };
+  }
+
+  const currentUrl = location.href.toLowerCase();
+  if (!currentUrl.includes(urlPattern)) {
+    return {
+      frameUrl: location.href,
+      urlMatched: false,
+      clicked: false
+    };
+  }
+
+  const element = document.querySelector(selector);
+  if (!element) {
+    return {
+      frameUrl: location.href,
+      urlMatched: true,
+      clicked: false,
+      message: `Selector not found in ${location.href}.`
+    };
+  }
+
+  triggerElementInteraction(element);
+  return {
+    frameUrl: location.href,
+    urlMatched: true,
+    clicked: true
+  };
+}
+
+function triggerElementInteraction(element) {
+  element.scrollIntoView({
+    block: "center",
+    inline: "center",
+    behavior: "instant"
+  });
+
+  if (typeof element.focus === "function") {
+    element.focus({ preventScroll: true });
+  }
+
+  const rect = element.getBoundingClientRect();
+  const clientX = rect.left + rect.width / 2;
+  const clientY = rect.top + rect.height / 2;
+  const baseOptions = {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    view: window,
+    button: 0,
+    buttons: 1,
+    clientX,
+    clientY
+  };
+
+  dispatchIfSupported(element, "pointerover", PointerEvent, {
+    ...baseOptions,
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true
+  });
+  dispatchIfSupported(element, "mouseover", MouseEvent, baseOptions);
+  dispatchIfSupported(element, "pointerdown", PointerEvent, {
+    ...baseOptions,
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true
+  });
+  dispatchIfSupported(element, "mousedown", MouseEvent, baseOptions);
+  dispatchIfSupported(element, "pointerup", PointerEvent, {
+    ...baseOptions,
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true
+  });
+  dispatchIfSupported(element, "mouseup", MouseEvent, baseOptions);
+  dispatchIfSupported(element, "click", MouseEvent, baseOptions);
+
+  if (typeof element.click === "function") {
+    element.click();
+  }
+}
+
+function dispatchIfSupported(element, type, EventType, options) {
+  if (typeof EventType !== "function") {
+    return;
+  }
+
+  element.dispatchEvent(new EventType(type, options));
 }
