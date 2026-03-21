@@ -37,3 +37,30 @@ Chrome may still throttle timers in inactive or background tabs, so very fast in
 The easiest way to share it directly is to send your friend this folder as a zip file. They can load it with **Load unpacked** in Chrome.
 
 If you want them to install it like a normal extension without enabling developer mode, you would need to publish it to the Chrome Web Store, which does require Google review and approval.
+
+## Tampermonkey Alternative
+
+If the Chrome extension is still too brittle on the Power Apps page, there is also a Tampermonkey userscript in [tampermonkey-auto-clicker.user.js](/Users/cniska/code/auto-clicker/tampermonkey-auto-clicker.user.js).
+
+How to use it:
+
+1. Install the Tampermonkey extension in Chrome
+2. Create a new script
+3. Paste in the contents of `tampermonkey-auto-clicker.user.js`
+4. Save it
+5. Open your Power Apps page
+6. Adjust the config block at the top if needed
+
+Useful defaults:
+
+- `selector: 'button[aria-label="Päivitä luettelo"]'`
+- `matchIndex: 2`
+- `intervalMs: 1000`
+
+After the page loads, you can also control it from DevTools console:
+
+- `powerAppsAutoClicker.help()`
+- `powerAppsAutoClicker.clickNow()`
+- `powerAppsAutoClicker.start()`
+- `powerAppsAutoClicker.stop()`
+- `powerAppsAutoClicker.setConfig({ matchIndex: 2, intervalMs: 1500 })`
