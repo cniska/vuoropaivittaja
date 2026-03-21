@@ -3,8 +3,15 @@ if (!globalThis.__autoClickerLoaded) {
 
   const STORAGE_KEY = "rules";
   const PICK_RESULT_KEY = "lastPickedElement";
-  const DEFAULT_INTERVAL_MS = 10000;
-  const MIN_INTERVAL_MS = 500;
+  const {
+    DEFAULT_INTERVAL_MS,
+    MIN_INTERVAL_MS,
+    normalizeRules,
+    clampIntervalMs,
+    urlMatches,
+    looksLikeXPath,
+    isStableIdentifier
+  } = globalThis.AutoClickerShared;
 
   const activeTimers = new Map();
   let lastUrl = location.href;
@@ -61,7 +68,7 @@ if (!globalThis.__autoClickerLoaded) {
 
   async function initialize() {
     const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
-    applyRules(normalizeRules(stored[STORAGE_KEY]));
+    applyRules(normalizeRules(stored[STORAGE_KEY], { requireId: true }));
   }
 
   function patchHistoryMethod(methodName) {
@@ -118,44 +125,6 @@ if (!globalThis.__autoClickerLoaded) {
 
     activeTimers.set(rule.id, timerId);
   }
-  }
-
-  function normalizeRules(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((rule) => rule && typeof rule === "object")
-    .map((rule) => ({
-      id: String(rule.id || ""),
-      name: String(rule.name || "").trim(),
-      urlPattern: String(rule.urlPattern || "").trim(),
-      selector: String(rule.selector || "").trim(),
-      targetUrl: String(rule.targetUrl || "").trim(),
-      activateTab: Boolean(rule.activateTab),
-      intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
-      enabled: Boolean(rule.enabled)
-    }))
-    .filter((rule) => rule.id && rule.urlPattern && rule.selector);
-  }
-
-  function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
-  const directValue = Number(intervalMs);
-  if (Number.isFinite(directValue)) {
-    return Math.max(MIN_INTERVAL_MS, directValue);
-  }
-
-  const legacyMinutes = Number(legacyIntervalMinutes);
-  if (Number.isFinite(legacyMinutes)) {
-    return Math.max(MIN_INTERVAL_MS, legacyMinutes * 60 * 1000);
-  }
-
-  return DEFAULT_INTERVAL_MS;
-  }
-
-  function urlMatches(pattern, url) {
-  return url.toLowerCase().includes(pattern.toLowerCase());
   }
 
   async function runRule(rule) {
@@ -313,6 +282,11 @@ if (!globalThis.__autoClickerLoaded) {
   }
 
   function buildSelectorForElement(element) {
+  const indexedXPath = buildIndexedXPathSelector(element);
+  if (indexedXPath) {
+    return indexedXPath;
+  }
+
   const candidates = buildSelectorCandidates(element);
   for (const candidate of candidates) {
     if (isUniqueSelector(candidate, element)) {
@@ -321,6 +295,33 @@ if (!globalThis.__autoClickerLoaded) {
   }
 
   return buildXPathSelector(element);
+  }
+
+  function buildIndexedXPathSelector(element) {
+  const tagName = element.localName;
+
+  for (const attribute of preferredAttributes()) {
+    const value = element.getAttribute(attribute);
+    if (!value) {
+      continue;
+    }
+
+    const baseXPath = `//${tagName}[@${attribute}=${toXPathLiteral(value)}]`;
+    const indexedXPath = buildIndexedXPath(baseXPath, element);
+    if (indexedXPath && indexedXPath.startsWith("(")) {
+      return indexedXPath;
+    }
+  }
+
+  const stableClass = getStableClassNames(element)[0];
+  if (!stableClass) {
+    return null;
+  }
+
+  const baseXPath =
+    `//${tagName}[contains(concat(' ', normalize-space(@class), ' '), ${toXPathLiteral(` ${stableClass} `)})]`;
+  const indexedXPath = buildIndexedXPath(baseXPath, element);
+  return indexedXPath && indexedXPath.startsWith("(") ? indexedXPath : null;
   }
 
   function buildSelectorCandidates(element) {
@@ -574,13 +575,6 @@ if (!globalThis.__autoClickerLoaded) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
 
-  function isStableIdentifier(value) {
-  return !/\s/.test(value) &&
-    !/\d{3,}/.test(value) &&
-    !/^f[a-z0-9]+$/i.test(value) &&
-    !/buttoncanvas/i.test(value);
-  }
-
   function pushCandidate(candidates, selector) {
   if (!selector || candidates.includes(selector)) {
     return;
@@ -650,11 +644,6 @@ if (!globalThis.__autoClickerLoaded) {
     clicked: false,
     message: "Selector was not found on the page."
   };
-  }
-
-  function looksLikeXPath(selector) {
-  const trimmed = selector.trim();
-  return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
   }
 
   function queryXPath(selector) {

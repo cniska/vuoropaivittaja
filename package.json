@@ -1,0 +1,7 @@
+{
+  "name": "auto-clicker",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}

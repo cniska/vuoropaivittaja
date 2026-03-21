@@ -1,8 +1,12 @@
 const STORAGE_KEY = "rules";
 const PICK_RESULT_KEY = "lastPickedElement";
 const DRAFT_RULE_KEY = "draftRule";
-const DEFAULT_INTERVAL_MS = 10000;
-const MIN_INTERVAL_MS = 500;
+const {
+  DEFAULT_INTERVAL_MS,
+  normalizeRules,
+  clampIntervalMs,
+  looksLikeXPath
+} = globalThis.AutoClickerShared;
 
 const form = document.getElementById("rule-form");
 const ruleIdInput = document.getElementById("rule-id");
@@ -37,7 +41,9 @@ async function initialize() {
     : "Open the site you want to automate, then reopen this popup.";
 
   const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
-  rules = normalizeRules(stored[STORAGE_KEY]);
+  rules = normalizeRules(stored[STORAGE_KEY], {
+    createId: () => crypto.randomUUID()
+  });
   renderRules();
 
   if (!urlPatternInput.value && activeTab?.url) {
@@ -263,40 +269,6 @@ async function persistRules() {
   await chrome.storage.local.set({ [STORAGE_KEY]: rules });
 }
 
-function normalizeRules(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((rule) => rule && typeof rule === "object")
-    .map((rule) => ({
-      id: String(rule.id || crypto.randomUUID()),
-      name: String(rule.name || "").trim(),
-      urlPattern: String(rule.urlPattern || "").trim(),
-      selector: String(rule.selector || "").trim(),
-      targetUrl: String(rule.targetUrl || "").trim(),
-      activateTab: Boolean(rule.activateTab),
-      intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
-      enabled: Boolean(rule.enabled)
-    }))
-    .filter((rule) => rule.urlPattern && rule.selector);
-}
-
-function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
-  const directValue = Number(intervalMs);
-  if (Number.isFinite(directValue)) {
-    return Math.max(MIN_INTERVAL_MS, directValue);
-  }
-
-  const legacyMinutes = Number(legacyIntervalMinutes);
-  if (Number.isFinite(legacyMinutes)) {
-    return Math.max(MIN_INTERVAL_MS, legacyMinutes * 60 * 1000);
-  }
-
-  return DEFAULT_INTERVAL_MS;
-}
-
 function formatInterval(intervalMs) {
   if (intervalMs < 1000) {
     return `${intervalMs} ms`;
@@ -409,9 +381,4 @@ function getTargetUrlFromForm() {
   }
 
   return activeTab?.url || "";
-}
-
-function looksLikeXPath(selector) {
-  const trimmed = String(selector || "").trim();
-  return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
 }

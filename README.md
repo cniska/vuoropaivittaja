@@ -36,6 +36,16 @@ You can now enter short intervals like `500` for 500 ms or `1000` for 1 second.
 
 Chrome may still throttle timers in inactive or background tabs, so very fast intervals are best when the target tab stays open and active.
 
+## Tests
+
+There is a lightweight Node test suite for the shared rule and selector helpers.
+
+Run it with:
+
+```bash
+npm test
+```
+
 ## Sharing with a friend
 
 The easiest way to share it directly is to send your friend this folder as a zip file. They can load it with **Load unpacked** in Chrome.

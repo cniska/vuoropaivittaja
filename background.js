@@ -1,4 +1,12 @@
+importScripts("shared.js");
+
 const STORAGE_KEY = "rules";
+const {
+  normalizeRules,
+  clampIntervalMs,
+  urlMatches,
+  looksLikeXPath
+} = self.AutoClickerShared;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "activate-sender-tab") {
@@ -86,7 +94,7 @@ async function testRuleInTab(tabId, rule) {
 
 async function ensureOpenTabsForEnabledRules() {
   const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
-  const rules = normalizeRules(stored[STORAGE_KEY]);
+  const rules = normalizeRules(stored[STORAGE_KEY], { requireId: true });
   const enabledRules = rules.filter((rule) => rule.enabled && rule.targetUrl);
   if (!enabledRules.length) {
     return;
@@ -108,44 +116,6 @@ async function ensureOpenTabsForEnabledRules() {
     });
     openTabs.push(createdTab);
   }
-}
-
-function normalizeRules(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((rule) => rule && typeof rule === "object")
-    .map((rule) => ({
-      id: String(rule.id || ""),
-      name: String(rule.name || "").trim(),
-      urlPattern: String(rule.urlPattern || "").trim(),
-      selector: String(rule.selector || "").trim(),
-      targetUrl: String(rule.targetUrl || "").trim(),
-      activateTab: Boolean(rule.activateTab),
-      intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
-      enabled: Boolean(rule.enabled)
-    }))
-    .filter((rule) => rule.id && rule.urlPattern && rule.selector);
-}
-
-function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
-  const directValue = Number(intervalMs);
-  if (Number.isFinite(directValue)) {
-    return Math.max(500, directValue);
-  }
-
-  const legacyMinutes = Number(legacyIntervalMinutes);
-  if (Number.isFinite(legacyMinutes)) {
-    return Math.max(500, legacyMinutes * 60 * 1000);
-  }
-
-  return 10000;
-}
-
-function urlMatches(pattern, url) {
-  return String(url || "").toLowerCase().includes(String(pattern || "").toLowerCase());
 }
 
 function testRuleInFrame(rule) {
@@ -245,11 +215,6 @@ function clickSelectorInPage(selector) {
     clicked: false,
     message: `Selector not found in ${location.href}.`
   };
-}
-
-function looksLikeXPath(selector) {
-  const trimmed = String(selector || "").trim();
-  return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
 }
 
 function queryXPath(selector) {
