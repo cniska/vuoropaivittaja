@@ -107,13 +107,15 @@ testRuleButton.addEventListener("click", async () => {
     enabled: enabledInput.checked
   };
 
-  const response = await chrome.runtime.sendMessage({
-    type: "test-rule",
-    rule,
-    tabId: activeTab.id
-  });
-
-  setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+  try {
+    const response = await sendToActiveTab({
+      type: "test-rule",
+      rule
+    });
+    setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+  } catch {
+    setStatus("Could not contact the page. Refresh it once and try again.", true);
+  }
 });
 
 pickElementButton.addEventListener("click", async () => {
@@ -123,7 +125,7 @@ pickElementButton.addEventListener("click", async () => {
   }
 
   try {
-    const response = await chrome.tabs.sendMessage(activeTab.id, { type: "start-picker" });
+    const response = await sendToActiveTab({ type: "start-picker" });
     setStatus(
       response?.message || "Click the target element on the page, then reopen this popup.",
       !response?.ok
@@ -168,13 +170,15 @@ function renderRules() {
         return;
       }
 
-      const response = await chrome.runtime.sendMessage({
-        type: "test-rule",
-        rule,
-        tabId: activeTab.id
-      });
-
-      setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+      try {
+        const response = await sendToActiveTab({
+          type: "test-rule",
+          rule
+        });
+        setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+      } catch {
+        setStatus("Could not contact the page. Refresh it once and try again.", true);
+      }
     });
 
     deleteButton.addEventListener("click", async () => {
@@ -293,4 +297,26 @@ async function loadPickedElement() {
 
   await chrome.storage.local.remove(PICK_RESULT_KEY);
   setStatus(`Filled selector from page pick: ${picked.selector}`);
+}
+
+async function sendToActiveTab(message) {
+  if (!activeTab?.id) {
+    throw new Error("No active tab");
+  }
+
+  try {
+    return await chrome.tabs.sendMessage(activeTab.id, message);
+  } catch (error) {
+    const errorMessage = error?.message || "";
+    if (!errorMessage.includes("Receiving end does not exist")) {
+      throw error;
+    }
+
+    await chrome.scripting.executeScript({
+      target: { tabId: activeTab.id, allFrames: true },
+      files: ["content.js"]
+    });
+
+    return chrome.tabs.sendMessage(activeTab.id, message);
+  }
 }

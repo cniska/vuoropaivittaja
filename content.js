@@ -1,66 +1,69 @@
-const STORAGE_KEY = "rules";
-const PICK_RESULT_KEY = "lastPickedElement";
-const DEFAULT_INTERVAL_MS = 300000;
-const MIN_INTERVAL_MS = 500;
+if (!globalThis.__autoClickerLoaded) {
+  globalThis.__autoClickerLoaded = true;
 
-const activeTimers = new Map();
-let lastUrl = location.href;
-let pickerState = null;
+  const STORAGE_KEY = "rules";
+  const PICK_RESULT_KEY = "lastPickedElement";
+  const DEFAULT_INTERVAL_MS = 300000;
+  const MIN_INTERVAL_MS = 500;
 
-void initialize();
+  const activeTimers = new Map();
+  let lastUrl = location.href;
+  let pickerState = null;
 
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local" && changes[STORAGE_KEY]) {
-    applyRules(normalizeRules(changes[STORAGE_KEY].newValue));
-  }
-});
+  void initialize();
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "start-picker") {
-    startPicker();
-    sendResponse({
-      ok: true,
-      message: "Click the target element on the page. Press Escape to cancel."
-    });
-    return false;
-  }
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes[STORAGE_KEY]) {
+      applyRules(normalizeRules(changes[STORAGE_KEY].newValue));
+    }
+  });
 
-  if (message?.type === "test-rule") {
-    const normalizedRule = normalizeRules([{ ...message.rule, id: "preview", enabled: true }])[0];
-    if (!normalizedRule) {
-      sendResponse({ ok: false, error: "Please enter a valid URL pattern and selector first." });
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "start-picker") {
+      startPicker();
+      sendResponse({
+        ok: true,
+        message: "Click the target element on the page. Press Escape to cancel."
+      });
       return false;
     }
 
-    if (!urlMatches(normalizedRule.urlPattern, location.href)) {
-      sendResponse({ ok: false, error: "The current tab URL does not match this rule." });
+    if (message?.type === "test-rule") {
+      const normalizedRule = normalizeRules([{ ...message.rule, id: "preview", enabled: true }])[0];
+      if (!normalizedRule) {
+        sendResponse({ ok: false, error: "Please enter a valid URL pattern and selector first." });
+        return false;
+      }
+
+      if (!urlMatches(normalizedRule.urlPattern, location.href)) {
+        sendResponse({ ok: false, error: "The current tab URL does not match this rule." });
+        return false;
+      }
+
+      const result = clickSelectorInPage(normalizedRule.selector);
+      sendResponse(
+        result.clicked
+          ? { ok: true, message: "Clicked the matching element." }
+          : { ok: false, error: result.message }
+      );
       return false;
     }
 
-    const result = clickSelectorInPage(normalizedRule.selector);
-    sendResponse(
-      result.clicked
-        ? { ok: true, message: "Clicked the matching element." }
-        : { ok: false, error: result.message }
-    );
     return false;
+  });
+
+  window.addEventListener("hashchange", handleUrlMaybeChanged);
+  window.addEventListener("popstate", handleUrlMaybeChanged);
+
+  patchHistoryMethod("pushState");
+  patchHistoryMethod("replaceState");
+
+  async function initialize() {
+    const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
+    applyRules(normalizeRules(stored[STORAGE_KEY]));
   }
 
-  return false;
-});
-
-window.addEventListener("hashchange", handleUrlMaybeChanged);
-window.addEventListener("popstate", handleUrlMaybeChanged);
-
-patchHistoryMethod("pushState");
-patchHistoryMethod("replaceState");
-
-async function initialize() {
-  const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
-  applyRules(normalizeRules(stored[STORAGE_KEY]));
-}
-
-function patchHistoryMethod(methodName) {
+  function patchHistoryMethod(methodName) {
   const original = history[methodName];
   if (typeof original !== "function") {
     return;
@@ -71,18 +74,18 @@ function patchHistoryMethod(methodName) {
     handleUrlMaybeChanged();
     return result;
   };
-}
+  }
 
-function handleUrlMaybeChanged() {
+  function handleUrlMaybeChanged() {
   if (location.href === lastUrl) {
     return;
   }
 
   lastUrl = location.href;
   void initialize();
-}
+  }
 
-function applyRules(rules) {
+  function applyRules(rules) {
   const matchingRules = rules.filter(
     (rule) => rule.enabled && urlMatches(rule.urlPattern, location.href)
   );
@@ -108,9 +111,9 @@ function applyRules(rules) {
 
     activeTimers.set(rule.id, timerId);
   }
-}
+  }
 
-function normalizeRules(value) {
+  function normalizeRules(value) {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -126,9 +129,9 @@ function normalizeRules(value) {
       enabled: Boolean(rule.enabled)
     }))
     .filter((rule) => rule.id && rule.urlPattern && rule.selector);
-}
+  }
 
-function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
+  function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
   const directValue = Number(intervalMs);
   if (Number.isFinite(directValue)) {
     return Math.max(MIN_INTERVAL_MS, directValue);
@@ -140,13 +143,13 @@ function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
   }
 
   return DEFAULT_INTERVAL_MS;
-}
+  }
 
-function urlMatches(pattern, url) {
+  function urlMatches(pattern, url) {
   return url.toLowerCase().includes(pattern.toLowerCase());
-}
+  }
 
-function startPicker() {
+  function startPicker() {
   stopPicker();
 
   const overlay = document.createElement("div");
@@ -240,18 +243,18 @@ function startPicker() {
       hint.remove();
     }
   };
-}
+  }
 
-function stopPicker() {
+  function stopPicker() {
   if (!pickerState) {
     return;
   }
 
   pickerState.cleanup();
   pickerState = null;
-}
+  }
 
-function getSelectableElement(event) {
+  function getSelectableElement(event) {
   const path = typeof event.composedPath === "function" ? event.composedPath() : [];
   for (const item of path) {
     if (item instanceof Element && !item.closest("[data-auto-clicker-overlay='true']")) {
@@ -260,9 +263,9 @@ function getSelectableElement(event) {
   }
 
   return event.target instanceof Element ? findPreferredTarget(event.target) : null;
-}
+  }
 
-function updateOverlay(overlay, target) {
+  function updateOverlay(overlay, target) {
   if (!target) {
     overlay.style.width = "0";
     overlay.style.height = "0";
@@ -274,15 +277,15 @@ function updateOverlay(overlay, target) {
   overlay.style.top = `${rect.top}px`;
   overlay.style.width = `${rect.width}px`;
   overlay.style.height = `${rect.height}px`;
-}
+  }
 
-function findPreferredTarget(element) {
+  function findPreferredTarget(element) {
   return (
     element.closest('button, a, input, select, textarea, [role="button"], [aria-label]') || element
   );
-}
+  }
 
-function buildSelectorForElement(element) {
+  function buildSelectorForElement(element) {
   if (element.id && isUniqueSelector(`#${CSS.escape(element.id)}`, element)) {
     return `#${CSS.escape(element.id)}`;
   }
@@ -305,9 +308,9 @@ function buildSelectorForElement(element) {
   }
 
   return segments.join(" > ") || directSelector;
-}
+  }
 
-function buildDirectSelector(element) {
+  function buildDirectSelector(element) {
   const tagName = element.localName;
   const parts = [tagName];
 
@@ -333,9 +336,9 @@ function buildDirectSelector(element) {
   }
 
   return parts.join("");
-}
+  }
 
-function buildPathSegment(element) {
+  function buildPathSegment(element) {
   if (element.id) {
     return `#${CSS.escape(element.id)}`;
   }
@@ -369,9 +372,9 @@ function buildPathSegment(element) {
   }
 
   return parts.join("");
-}
+  }
 
-function isUniqueSelector(selector, expectedElement) {
+  function isUniqueSelector(selector, expectedElement) {
   if (!selector) {
     return false;
   }
@@ -382,9 +385,9 @@ function isUniqueSelector(selector, expectedElement) {
   } catch {
     return false;
   }
-}
+  }
 
-function preferredAttributes() {
+  function preferredAttributes() {
   return [
     "data-testid",
     "data-test",
@@ -395,22 +398,22 @@ function preferredAttributes() {
     "type",
     "role"
   ];
-}
+  }
 
-function getStableClassNames(element) {
+  function getStableClassNames(element) {
   return Array.from(element.classList).filter((className) =>
     /^[a-z][a-z0-9_-]{1,30}$/i.test(className) &&
     !/\d{3,}/.test(className) &&
     !/^f[a-z0-9]+$/i.test(className) &&
     !/^_{2,}/.test(className)
   );
-}
+  }
 
-function escapeAttributeValue(value) {
+  function escapeAttributeValue(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
+  }
 
-function clickSelectorInPage(selector) {
+  function clickSelectorInPage(selector) {
   const visited = new Set();
   const queue = [document];
 
@@ -443,4 +446,5 @@ function clickSelectorInPage(selector) {
     clicked: false,
     message: "Selector was not found on the page."
   };
+  }
 }
