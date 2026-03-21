@@ -4,7 +4,7 @@ This Chrome extension lets you save multiple auto-click rules. Each rule has:
 
 - A `URL contains` value to decide which website it should run on
 - A CSS selector for the button or element to click
-- Its own interval in minutes
+- Its own interval in milliseconds
 - An enabled or disabled state
 
 ## Load it in Chrome
@@ -19,10 +19,17 @@ This Chrome extension lets you save multiple auto-click rules. Each rule has:
 1. Open the website you want to automate in Chrome
 2. Click the extension icon
 3. Use **Use current site** to fill the site automatically
-4. Enter the button selector and interval
-5. Save the rule
+4. Click **Pick from page** if you want to choose the exact element visually
+5. Enter or confirm the button selector and interval in milliseconds
+6. Save the rule
 
-The extension keeps one timer per enabled rule and clicks the matching selector in any open tab whose URL contains the saved text.
+The extension runs one timer per enabled rule inside matching tabs and clicks the matching selector whenever the interval elapses.
+
+## Timing note
+
+You can now enter short intervals like `500` for 500 ms or `1000` for 1 second.
+
+Chrome may still throttle timers in inactive or background tabs, so very fast intervals are best when the target tab stays open and active.
 
 ## Sharing with a friend
 

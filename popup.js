@@ -1,4 +1,7 @@
 const STORAGE_KEY = "rules";
+const PICK_RESULT_KEY = "lastPickedElement";
+const DEFAULT_INTERVAL_MS = 300000;
+const MIN_INTERVAL_MS = 500;
 
 const form = document.getElementById("rule-form");
 const ruleIdInput = document.getElementById("rule-id");
@@ -7,6 +10,7 @@ const urlPatternInput = document.getElementById("url-pattern");
 const selectorInput = document.getElementById("selector");
 const intervalInput = document.getElementById("interval");
 const enabledInput = document.getElementById("enabled");
+const pickElementButton = document.getElementById("pick-element");
 const statusElement = document.getElementById("status");
 const currentSiteElement = document.getElementById("current-site");
 const useCurrentSiteButton = document.getElementById("use-current-site");
@@ -36,6 +40,8 @@ async function initialize() {
   if (!urlPatternInput.value && activeTab?.url) {
     urlPatternInput.value = defaultPatternFor(activeTab.url);
   }
+
+  await loadPickedElement();
 }
 
 form.addEventListener("submit", async (event) => {
@@ -48,14 +54,14 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  const intervalMinutes = Math.max(1, Number(intervalInput.value) || 5);
+  const intervalMs = clampIntervalMs(intervalInput.value);
   const id = ruleIdInput.value || crypto.randomUUID();
   const nextRule = {
     id,
     name: nameInput.value.trim(),
     urlPattern: trimmedPattern,
     selector: trimmedSelector,
-    intervalMinutes,
+    intervalMs,
     enabled: enabledInput.checked
   };
 
@@ -97,7 +103,7 @@ testRuleButton.addEventListener("click", async () => {
   const rule = {
     urlPattern: urlPatternInput.value.trim(),
     selector: selectorInput.value.trim(),
-    intervalMinutes: Number(intervalInput.value) || 5,
+    intervalMs: clampIntervalMs(intervalInput.value),
     enabled: enabledInput.checked
   };
 
@@ -108,6 +114,24 @@ testRuleButton.addEventListener("click", async () => {
   });
 
   setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+});
+
+pickElementButton.addEventListener("click", async () => {
+  if (!activeTab?.id) {
+    setStatus("Open the target site in a browser tab first.", true);
+    return;
+  }
+
+  try {
+    const response = await chrome.tabs.sendMessage(activeTab.id, { type: "start-picker" });
+    setStatus(
+      response?.message || "Click the target element on the page, then reopen this popup.",
+      !response?.ok
+    );
+    window.close();
+  } catch {
+    setStatus("Could not start picker. Refresh the page once and try again.", true);
+  }
 });
 
 function renderRules() {
@@ -129,7 +153,7 @@ function renderRules() {
     title.textContent = rule.name || "Unnamed rule";
     url.textContent = `URL contains: ${rule.urlPattern}`;
     selector.textContent = `Selector: ${rule.selector}`;
-    interval.textContent = `Every ${rule.intervalMinutes} minute${rule.intervalMinutes === 1 ? "" : "s"}`;
+    interval.textContent = `Every ${formatInterval(rule.intervalMs)}`;
     badge.textContent = rule.enabled ? "Enabled" : "Disabled";
     badge.dataset.state = rule.enabled ? "enabled" : "disabled";
 
@@ -173,7 +197,7 @@ function populateForm(rule) {
   nameInput.value = rule.name || "";
   urlPatternInput.value = rule.urlPattern;
   selectorInput.value = rule.selector;
-  intervalInput.value = String(rule.intervalMinutes);
+  intervalInput.value = String(rule.intervalMs);
   enabledInput.checked = rule.enabled;
 }
 
@@ -181,7 +205,7 @@ function clearForm() {
   ruleIdInput.value = "";
   nameInput.value = "";
   selectorInput.value = "";
-  intervalInput.value = "5";
+  intervalInput.value = String(DEFAULT_INTERVAL_MS);
   enabledInput.checked = true;
   urlPatternInput.value = activeTab?.url ? defaultPatternFor(activeTab.url) : "";
 }
@@ -208,10 +232,42 @@ function normalizeRules(value) {
       name: String(rule.name || "").trim(),
       urlPattern: String(rule.urlPattern || "").trim(),
       selector: String(rule.selector || "").trim(),
-      intervalMinutes: Math.max(1, Number(rule.intervalMinutes) || 5),
+      intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
       enabled: Boolean(rule.enabled)
     }))
     .filter((rule) => rule.urlPattern && rule.selector);
+}
+
+function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
+  const directValue = Number(intervalMs);
+  if (Number.isFinite(directValue)) {
+    return Math.max(MIN_INTERVAL_MS, directValue);
+  }
+
+  const legacyMinutes = Number(legacyIntervalMinutes);
+  if (Number.isFinite(legacyMinutes)) {
+    return Math.max(MIN_INTERVAL_MS, legacyMinutes * 60 * 1000);
+  }
+
+  return DEFAULT_INTERVAL_MS;
+}
+
+function formatInterval(intervalMs) {
+  if (intervalMs < 1000) {
+    return `${intervalMs} ms`;
+  }
+
+  const seconds = intervalMs / 1000;
+  if (seconds < 60) {
+    return `${trimNumber(seconds)} second${seconds === 1 ? "" : "s"}`;
+  }
+
+  const minutes = seconds / 60;
+  return `${trimNumber(minutes)} minute${minutes === 1 ? "" : "s"}`;
+}
+
+function trimNumber(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function defaultPatternFor(url) {
@@ -221,4 +277,20 @@ function defaultPatternFor(url) {
   } catch {
     return url;
   }
+}
+
+async function loadPickedElement() {
+  const stored = await chrome.storage.local.get({ [PICK_RESULT_KEY]: null });
+  const picked = stored[PICK_RESULT_KEY];
+  if (!picked || typeof picked.selector !== "string") {
+    return;
+  }
+
+  selectorInput.value = picked.selector;
+  if (!urlPatternInput.value && activeTab?.url) {
+    urlPatternInput.value = defaultPatternFor(activeTab.url);
+  }
+
+  await chrome.storage.local.remove(PICK_RESULT_KEY);
+  setStatus(`Filled selector from page pick: ${picked.selector}`);
 }

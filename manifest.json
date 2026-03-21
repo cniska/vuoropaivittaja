@@ -3,18 +3,25 @@
   "name": "Auto Clicker",
   "version": "1.0.0",
   "description": "Clicks configured buttons on matching pages at custom intervals.",
+  "minimum_chrome_version": "120",
   "permissions": [
-    "alarms",
-    "scripting",
     "storage",
     "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_title": "Auto Clicker",
     "default_popup": "popup.html"

@@ -35,11 +35,16 @@
           <label class="field">
             <span>Button selector</span>
             <input id="selector" name="selector" type="text" placeholder='button[data-test="refresh"]' required>
+            <div class="field-actions">
+              <button id="pick-element" type="button" class="secondary-button">Pick from page</button>
+              <small class="field-hint">Pick the exact button on the page and I’ll fill in the selector.</small>
+            </div>
           </label>
 
           <label class="field">
-            <span>Interval in minutes</span>
-            <input id="interval" name="interval" type="number" min="1" step="1" value="5" required>
+            <span>Interval in milliseconds</span>
+            <input id="interval" name="interval" type="number" min="500" step="100" value="300000" required>
+            <small class="field-hint">Minimum 500 ms. Example: 1000 = 1 second.</small>
           </label>
 
           <label class="checkbox">
