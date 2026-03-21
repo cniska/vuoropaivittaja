@@ -1,5 +1,6 @@
 const STORAGE_KEY = "rules";
 const PICK_RESULT_KEY = "lastPickedElement";
+const DRAFT_RULE_KEY = "draftRule";
 const DEFAULT_INTERVAL_MS = 300000;
 const MIN_INTERVAL_MS = 500;
 
@@ -42,6 +43,7 @@ async function initialize() {
     urlPatternInput.value = defaultPatternFor(activeTab.url);
   }
 
+  await loadDraftRule();
   await loadPickedElement();
 }
 
@@ -77,6 +79,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   await persistRules();
+  await clearDraftRule();
   clearForm();
   renderRules();
 });
@@ -91,7 +94,8 @@ useCurrentSiteButton.addEventListener("click", () => {
   setStatus("Filled in the current site.");
 });
 
-resetFormButton.addEventListener("click", () => {
+resetFormButton.addEventListener("click", async () => {
+  await clearDraftRule();
   clearForm();
   setStatus("Form cleared.");
 });
@@ -129,6 +133,7 @@ pickElementButton.addEventListener("click", async () => {
   }
 
   try {
+    await saveDraftRule();
     const response = await sendToActiveTab({ type: "start-picker" });
     setStatus(
       response?.message || "Click the target element on the page, then reopen this popup.",
@@ -221,6 +226,18 @@ function clearForm() {
   urlPatternInput.value = activeTab?.url ? defaultPatternFor(activeTab.url) : "";
 }
 
+function getDraftRuleFromForm() {
+  return {
+    id: ruleIdInput.value.trim(),
+    name: nameInput.value.trim(),
+    urlPattern: urlPatternInput.value.trim(),
+    selector: selectorInput.value.trim(),
+    activateTab: activateTabInput.checked,
+    intervalMs: clampIntervalMs(intervalInput.value),
+    enabled: enabledInput.checked
+  };
+}
+
 function setStatus(message, isError = false) {
   statusElement.textContent = message;
   statusElement.style.color = isError ? "#9f2d1f" : "#1f6f43";
@@ -311,6 +328,37 @@ async function loadPickedElement() {
       ? `Filled selector from picked frame: ${defaultPatternFor(picked.url)}`
       : `Filled selector from page pick: ${picked.selector}`
   );
+}
+
+async function saveDraftRule() {
+  await chrome.storage.local.set({
+    [DRAFT_RULE_KEY]: getDraftRuleFromForm()
+  });
+}
+
+async function loadDraftRule() {
+  const stored = await chrome.storage.local.get({ [DRAFT_RULE_KEY]: null });
+  const draft = stored[DRAFT_RULE_KEY];
+  if (!draft || typeof draft !== "object") {
+    return;
+  }
+
+  populateForm({
+    id: String(draft.id || ""),
+    name: String(draft.name || "").trim(),
+    urlPattern: String(draft.urlPattern || "").trim(),
+    selector: String(draft.selector || "").trim(),
+    activateTab: Boolean(draft.activateTab),
+    intervalMs: clampIntervalMs(draft.intervalMs, draft.intervalMinutes),
+    enabled: Boolean(draft.enabled)
+  });
+
+  await clearDraftRule();
+  setStatus("Restored your in-progress edit.");
+}
+
+async function clearDraftRule() {
+  await chrome.storage.local.remove(DRAFT_RULE_KEY);
 }
 
 async function sendToActiveTab(message) {
