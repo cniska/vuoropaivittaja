@@ -54,6 +54,7 @@ if (!globalThis.__autoClickerLoaded) {
 
   window.addEventListener("hashchange", handleUrlMaybeChanged);
   window.addEventListener("popstate", handleUrlMaybeChanged);
+  document.addEventListener("visibilitychange", handleVisibilityChanged);
 
   patchHistoryMethod("pushState");
   patchHistoryMethod("replaceState");
@@ -83,6 +84,12 @@ if (!globalThis.__autoClickerLoaded) {
 
   lastUrl = location.href;
   void initialize();
+  }
+
+  function handleVisibilityChanged() {
+  if (document.visibilityState === "visible") {
+    void initialize();
+  }
   }
 
   function applyRules(rules) {
@@ -151,6 +158,10 @@ if (!globalThis.__autoClickerLoaded) {
   }
 
   async function runRule(rule) {
+  if (document.visibilityState !== "visible") {
+    return;
+  }
+
   if (rule.activateTab) {
     const activated = await requestTabActivation();
     if (!activated) {

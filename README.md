@@ -28,6 +28,8 @@ When the picker sees duplicate matching elements, it tries to generate a more sp
 
 The extension runs one timer per enabled rule inside matching tabs and clicks the matching selector whenever the interval elapses.
 
+The click loop only runs while the target page is visible, so this setup is intended for use on the active tab.
+
 ## Timing note
 
 You can now enter short intervals like `500` for 500 ms or `1000` for 1 second.
