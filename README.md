@@ -20,7 +20,7 @@ This Chrome extension lets you save multiple auto-click rules. Each rule has:
 1. Open the website you want to automate in Chrome
 2. Click the extension icon
 3. Use **Use current site** to fill the site automatically
-4. Click **Pick from page** if you want to choose the exact element visually
+4. Click **Pick from page** if you want to choose the exact button visually
 5. Enter or confirm the button selector and interval in milliseconds
 6. Save the rule
 

@@ -295,7 +295,8 @@ if (!globalThis.__autoClickerLoaded) {
 
   function findPreferredTarget(element) {
   return (
-    element.closest('button, a, input, select, textarea, [role="button"], [aria-label]') || element
+    element.closest('button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"]')
+      || null
   );
   }
 
