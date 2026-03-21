@@ -1,0 +1,208 @@
+:root {
+  color-scheme: light;
+  --bg: #f3efe7;
+  --card: rgba(255, 251, 245, 0.92);
+  --card-border: rgba(104, 74, 30, 0.14);
+  --text: #2b2418;
+  --muted: #6e6047;
+  --accent: #a6461d;
+  --accent-strong: #823316;
+  --accent-soft: rgba(166, 70, 29, 0.12);
+  --ok: #1f6f43;
+  --shadow: 0 14px 32px rgba(73, 45, 15, 0.15);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 420px;
+  background:
+    radial-gradient(circle at top left, rgba(237, 180, 85, 0.28), transparent 32%),
+    linear-gradient(180deg, #f8f5ee 0%, var(--bg) 100%);
+  color: var(--text);
+}
+
+.app {
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-size: 20px;
+}
+
+.current-site,
+.status,
+.rule-url,
+.rule-selector,
+.rule-interval,
+.empty-state {
+  color: var(--muted);
+}
+
+.current-site,
+.status,
+.empty-state {
+  margin-top: 12px;
+}
+
+.status {
+  min-height: 18px;
+  font-size: 13px;
+}
+
+.rule-form {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field input {
+  border: 1px solid rgba(97, 74, 42, 0.18);
+  background: #fffdf8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+}
+
+.field input:focus {
+  outline: 2px solid rgba(166, 70, 29, 0.22);
+  border-color: var(--accent);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.actions,
+.rule-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.primary-button {
+  background: var(--accent);
+  color: white;
+}
+
+.primary-button:hover {
+  background: var(--accent-strong);
+}
+
+.secondary-button {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.ghost-button {
+  background: transparent;
+  color: var(--muted);
+}
+
+.rules-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.rule-card {
+  border: 1px solid rgba(97, 74, 42, 0.16);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.rule-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rule-title {
+  font-size: 16px;
+}
+
+.rule-badge {
+  align-self: start;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(31, 111, 67, 0.12);
+  color: var(--ok);
+}
+
+.rule-badge[data-state="disabled"] {
+  background: rgba(110, 96, 71, 0.12);
+  color: var(--muted);
+}

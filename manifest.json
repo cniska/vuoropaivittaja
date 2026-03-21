@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Clicker",
+  "version": "1.0.0",
+  "description": "Clicks configured buttons on matching pages at custom intervals.",
+  "permissions": [
+    "alarms",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Auto Clicker",
+    "default_popup": "popup.html"
+  }
+}

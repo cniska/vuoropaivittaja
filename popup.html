@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Clicker</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Auto Clicker</p>
+            <h1>Rules</h1>
+          </div>
+          <button id="use-current-site" type="button" class="secondary-button">Use current site</button>
+        </div>
+
+        <p id="current-site" class="current-site">Detecting current tab...</p>
+
+        <form id="rule-form" class="rule-form">
+          <input id="rule-id" type="hidden">
+
+          <label class="field">
+            <span>Rule name</span>
+            <input id="name" name="name" type="text" placeholder="Free slots refresh">
+          </label>
+
+          <label class="field">
+            <span>URL contains</span>
+            <input id="url-pattern" name="urlPattern" type="text" placeholder="example.com/appointments">
+          </label>
+
+          <label class="field">
+            <span>Button selector</span>
+            <input id="selector" name="selector" type="text" placeholder='button[data-test="refresh"]' required>
+          </label>
+
+          <label class="field">
+            <span>Interval in minutes</span>
+            <input id="interval" name="interval" type="number" min="1" step="1" value="5" required>
+          </label>
+
+          <label class="checkbox">
+            <input id="enabled" name="enabled" type="checkbox" checked>
+            <span>Enable this rule</span>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary-button">Save rule</button>
+            <button id="test-rule" type="button" class="secondary-button">Test on current tab</button>
+            <button id="reset-form" type="button" class="ghost-button">Clear form</button>
+          </div>
+        </form>
+
+        <p id="status" class="status" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Saved rules</p>
+            <h2>Active list</h2>
+          </div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          No rules yet. Add one above for the current site.
+        </div>
+        <div id="rules-list" class="rules-list"></div>
+      </section>
+    </main>
+
+    <template id="rule-item-template">
+      <article class="rule-card">
+        <div class="rule-card-header">
+          <div>
+            <h3 class="rule-title"></h3>
+            <p class="rule-url"></p>
+          </div>
+          <span class="rule-badge"></span>
+        </div>
+        <p class="rule-selector"></p>
+        <p class="rule-interval"></p>
+        <div class="rule-actions">
+          <button type="button" class="secondary-button edit-rule">Edit</button>
+          <button type="button" class="secondary-button test-existing-rule">Test</button>
+          <button type="button" class="ghost-button delete-rule">Delete</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
