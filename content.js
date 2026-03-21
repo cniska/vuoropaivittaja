@@ -427,7 +427,7 @@ if (!globalThis.__autoClickerLoaded) {
 
     const element = root.querySelector(selector);
     if (element) {
-      element.click();
+      triggerElementInteraction(element);
       return {
         clicked: true,
         message: "Clicked the matching element."
@@ -446,5 +446,66 @@ if (!globalThis.__autoClickerLoaded) {
     clicked: false,
     message: "Selector was not found on the page."
   };
+  }
+
+  function triggerElementInteraction(element) {
+    element.scrollIntoView({
+      block: "center",
+      inline: "center",
+      behavior: "instant"
+    });
+
+    if (typeof element.focus === "function") {
+      element.focus({ preventScroll: true });
+    }
+
+    const rect = element.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2;
+    const clientY = rect.top + rect.height / 2;
+    const baseOptions = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: window,
+      button: 0,
+      buttons: 1,
+      clientX,
+      clientY
+    };
+
+    dispatchIfSupported(element, "pointerover", PointerEvent, {
+      ...baseOptions,
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true
+    });
+    dispatchIfSupported(element, "mouseover", MouseEvent, baseOptions);
+    dispatchIfSupported(element, "pointerdown", PointerEvent, {
+      ...baseOptions,
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true
+    });
+    dispatchIfSupported(element, "mousedown", MouseEvent, baseOptions);
+    dispatchIfSupported(element, "pointerup", PointerEvent, {
+      ...baseOptions,
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true
+    });
+    dispatchIfSupported(element, "mouseup", MouseEvent, baseOptions);
+    dispatchIfSupported(element, "click", MouseEvent, baseOptions);
+
+    if (typeof element.click === "function") {
+      element.click();
+    }
+  }
+
+  function dispatchIfSupported(element, type, EventType, options) {
+    if (typeof EventType !== "function") {
+      return;
+    }
+
+    element.dispatchEvent(new EventType(type, options));
   }
 }
