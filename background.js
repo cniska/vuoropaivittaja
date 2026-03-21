@@ -86,21 +86,64 @@ function testRuleInFrame(rule) {
     };
   }
 
-  const element = document.querySelector(selector);
-  if (!element) {
+  const result = clickSelectorInPage(selector);
+  if (!result.clicked) {
     return {
       frameUrl: location.href,
       urlMatched: true,
       clicked: false,
-      message: `Selector not found in ${location.href}.`
+      message: result.message || `Selector not found in ${location.href}.`
     };
   }
 
-  triggerElementInteraction(element);
   return {
     frameUrl: location.href,
     urlMatched: true,
     clicked: true
+  };
+}
+
+function clickSelectorInPage(selector) {
+  const visited = new Set();
+  const queue = [document];
+
+  while (queue.length) {
+    const root = queue.shift();
+    if (!root || visited.has(root)) {
+      continue;
+    }
+
+    visited.add(root);
+
+    let element = null;
+    try {
+      element = root.querySelector(selector);
+    } catch {
+      return {
+        clicked: false,
+        message: `Invalid selector: ${selector}`
+      };
+    }
+
+    if (element) {
+      triggerElementInteraction(element);
+      return {
+        clicked: true,
+        message: "Clicked the matching element."
+      };
+    }
+
+    const shadowHosts = root.querySelectorAll("*");
+    for (const host of shadowHosts) {
+      if (host.shadowRoot) {
+        queue.push(host.shadowRoot);
+      }
+    }
+  }
+
+  return {
+    clicked: false,
+    message: `Selector not found in ${location.href}.`
   };
 }
 
