@@ -3,7 +3,7 @@
 This Chrome extension lets you save multiple auto-click rules. Each rule has:
 
 - A `URL contains` value to decide which website it should run on
-- A CSS selector for the button or element to click
+- A CSS selector or XPath for the button or element to click
 - An optional setting to activate the tab before clicking
 - Its own interval in milliseconds
 - An enabled or disabled state
@@ -23,6 +23,8 @@ This Chrome extension lets you save multiple auto-click rules. Each rule has:
 4. Click **Pick from page** if you want to choose the exact button visually
 5. Enter or confirm the button selector and interval in milliseconds
 6. Save the rule
+
+When the picker sees duplicate matching elements, it tries to generate a more specific selector automatically. If CSS stays ambiguous, it can fall back to XPath such as `(//button[@aria-label='Päivitä luettelo'])[2]`.
 
 The extension runs one timer per enabled rule inside matching tabs and clicks the matching selector whenever the interval elapses.
 

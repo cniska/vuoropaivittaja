@@ -104,6 +104,22 @@ function testRuleInFrame(rule) {
 }
 
 function clickSelectorInPage(selector) {
+  if (looksLikeXPath(selector)) {
+    const xpathElement = queryXPath(selector);
+    if (!xpathElement) {
+      return {
+        clicked: false,
+        message: `XPath not found in ${location.href}.`
+      };
+    }
+
+    triggerElementInteraction(xpathElement);
+    return {
+      clicked: true,
+      message: "Clicked the matching XPath element."
+    };
+  }
+
   const visited = new Set();
   const queue = [document];
 
@@ -145,6 +161,26 @@ function clickSelectorInPage(selector) {
     clicked: false,
     message: `Selector not found in ${location.href}.`
   };
+}
+
+function looksLikeXPath(selector) {
+  const trimmed = String(selector || "").trim();
+  return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
+}
+
+function queryXPath(selector) {
+  try {
+    const result = document.evaluate(
+      selector,
+      document,
+      null,
+      XPathResult.FIRST_ORDERED_NODE_TYPE,
+      null
+    );
+    return result.singleNodeValue instanceof Element ? result.singleNodeValue : null;
+  } catch {
+    return null;
+  }
 }
 
 function triggerElementInteraction(element) {

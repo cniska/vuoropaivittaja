@@ -301,60 +301,124 @@ if (!globalThis.__autoClickerLoaded) {
   }
 
   function buildSelectorForElement(element) {
-  if (element.id && isUniqueSelector(`#${CSS.escape(element.id)}`, element)) {
-    return `#${CSS.escape(element.id)}`;
-  }
-
-  const directSelector = buildDirectSelector(element);
-  if (isUniqueSelector(directSelector, element)) {
-    return directSelector;
-  }
-
-  const segments = [];
-  let current = element;
-
-  while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.documentElement) {
-    segments.unshift(buildPathSegment(current));
-    const selector = segments.join(" > ");
-    if (isUniqueSelector(selector, element)) {
-      return selector;
+  const candidates = buildSelectorCandidates(element);
+  for (const candidate of candidates) {
+    if (isUniqueSelector(candidate, element)) {
+      return candidate;
     }
-    current = current.parentElement;
   }
 
-  return segments.join(" > ") || directSelector;
+  return buildXPathSelector(element);
   }
 
-  function buildDirectSelector(element) {
+  function buildSelectorCandidates(element) {
+  const candidates = [];
+  const directSelectors = buildDirectSelectors(element);
+
+  for (const selector of directSelectors) {
+    pushCandidate(candidates, selector);
+  }
+
+  const ancestorSelectors = getAncestorSelectors(element);
+  for (const ancestorSelector of ancestorSelectors) {
+    for (const selector of directSelectors) {
+      pushCandidate(candidates, `${ancestorSelector} ${selector}`);
+    }
+  }
+
+  const pathCandidates = buildPathCandidates(element);
+  for (const selector of pathCandidates) {
+    pushCandidate(candidates, selector);
+  }
+
+  return candidates;
+  }
+
+  function buildDirectSelectors(element) {
   const tagName = element.localName;
-  const parts = [tagName];
+  const selectors = [];
+
+  if (element.id && isStableIdentifier(element.id)) {
+    selectors.push(`#${CSS.escape(element.id)}`);
+  }
 
   for (const attribute of preferredAttributes()) {
     const value = element.getAttribute(attribute);
-    if (!value) {
-      continue;
-    }
-
-    parts.push(`[${attribute}="${escapeAttributeValue(value)}"]`);
-    const selector = parts.join("");
-    if (isUniqueSelector(selector, element)) {
-      return selector;
+    if (value) {
+      selectors.push(`${tagName}[${attribute}="${escapeAttributeValue(value)}"]`);
     }
   }
 
   const classNames = getStableClassNames(element);
   if (classNames.length) {
-    const selector = `${tagName}.${classNames.map((name) => CSS.escape(name)).join(".")}`;
-    if (isUniqueSelector(selector, element)) {
-      return selector;
+    selectors.push(`${tagName}.${classNames[0] ? CSS.escape(classNames[0]) : ""}`);
+    selectors.push(`${tagName}.${classNames.map((name) => CSS.escape(name)).join(".")}`);
+  }
+
+  selectors.push(tagName);
+  return selectors.filter(Boolean);
+  }
+
+  function getAncestorSelectors(element) {
+  const selectors = [];
+  let current = element.parentElement;
+  let depth = 0;
+
+  while (current && depth < 3) {
+    const selector = buildAncestorSelector(current);
+    if (selector) {
+      selectors.push(selector);
+    }
+
+    current = current.parentElement;
+    depth += 1;
+  }
+
+  return selectors;
+  }
+
+  function buildAncestorSelector(element) {
+  if (element.id && isStableIdentifier(element.id)) {
+    return `#${CSS.escape(element.id)}`;
+  }
+
+  const tagName = element.localName;
+  const parts = [tagName];
+
+  for (const attribute of preferredAttributes()) {
+    const value = element.getAttribute(attribute);
+    if (value) {
+      parts.push(`[${attribute}="${escapeAttributeValue(value)}"]`);
+      break;
     }
   }
 
-  return parts.join("");
+  if (parts.length === 1) {
+    const stableClass = getStableClassNames(element)[0];
+    if (stableClass) {
+      parts.push(`.${CSS.escape(stableClass)}`);
+    }
+  }
+
+  return parts.length > 1 ? parts.join("") : null;
+  }
+
+  function buildPathCandidates(element) {
+  const selectors = [];
+  const segments = [];
+  let current = element;
+
+  while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.documentElement) {
+    segments.unshift(buildPathSegment(current));
+    selectors.push(segments.join(" > "));
+    current = current.parentElement;
+  }
+
+  return selectors.reverse();
   }
 
   function buildPathSegment(element) {
-  if (element.id) {
+  if (element.id && isStableIdentifier(element.id)) {
     return `#${CSS.escape(element.id)}`;
   }
 
@@ -389,6 +453,75 @@ if (!globalThis.__autoClickerLoaded) {
   return parts.join("");
   }
 
+  function buildXPathSelector(element) {
+  const tagName = element.localName;
+
+  for (const attribute of preferredAttributes()) {
+    const value = element.getAttribute(attribute);
+    if (!value) {
+      continue;
+    }
+
+    const baseXPath = `//${tagName}[@${attribute}=${toXPathLiteral(value)}]`;
+    const indexedXPath = buildIndexedXPath(baseXPath, element);
+    if (indexedXPath) {
+      return indexedXPath;
+    }
+  }
+
+  const stableClass = getStableClassNames(element)[0];
+  if (stableClass) {
+    const baseXPath =
+      `//${tagName}[contains(concat(' ', normalize-space(@class), ' '), ${toXPathLiteral(` ${stableClass} `)})]`;
+    const indexedXPath = buildIndexedXPath(baseXPath, element);
+    if (indexedXPath) {
+      return indexedXPath;
+    }
+  }
+
+  return buildAbsoluteXPath(element);
+  }
+
+  function buildIndexedXPath(baseXPath, element) {
+  try {
+    const result = document.evaluate(
+      baseXPath,
+      document,
+      null,
+      XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+      null
+    );
+
+    for (let index = 0; index < result.snapshotLength; index += 1) {
+      if (result.snapshotItem(index) === element) {
+        return result.snapshotLength === 1 ? baseXPath : `(${baseXPath})[${index + 1}]`;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+  }
+
+  function buildAbsoluteXPath(element) {
+  const segments = [];
+  let current = element;
+
+  while (current && current.nodeType === Node.ELEMENT_NODE) {
+    const tagName = current.localName;
+    const parent = current.parentElement;
+    const siblings = parent
+      ? Array.from(parent.children).filter((child) => child.localName === tagName)
+      : [];
+    const index = siblings.length > 1 ? `[${siblings.indexOf(current) + 1}]` : "";
+    segments.unshift(`${tagName}${index}`);
+    current = parent;
+  }
+
+  return `/${segments.join("/")}`;
+  }
+
   function isUniqueSelector(selector, expectedElement) {
   if (!selector) {
     return false;
@@ -420,7 +553,8 @@ if (!globalThis.__autoClickerLoaded) {
     /^[a-z][a-z0-9_-]{1,30}$/i.test(className) &&
     !/\d{3,}/.test(className) &&
     !/^f[a-z0-9]+$/i.test(className) &&
-    !/^_{2,}/.test(className)
+    !/^_{2,}/.test(className) &&
+    !/buttoncanvas/i.test(className)
   );
   }
 
@@ -428,7 +562,50 @@ if (!globalThis.__autoClickerLoaded) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
 
+  function isStableIdentifier(value) {
+  return !/\s/.test(value) &&
+    !/\d{3,}/.test(value) &&
+    !/^f[a-z0-9]+$/i.test(value) &&
+    !/buttoncanvas/i.test(value);
+  }
+
+  function pushCandidate(candidates, selector) {
+  if (!selector || candidates.includes(selector)) {
+    return;
+  }
+
+  candidates.push(selector);
+  }
+
+  function toXPathLiteral(value) {
+  if (!value.includes("'")) {
+    return `'${value}'`;
+  }
+
+  if (!value.includes('"')) {
+    return `"${value}"`;
+  }
+
+  return `concat('${value.split("'").join(`', "'", '`)}')`;
+  }
+
   function clickSelectorInPage(selector) {
+  if (looksLikeXPath(selector)) {
+    const xpathElement = queryXPath(selector);
+    if (!xpathElement) {
+      return {
+        clicked: false,
+        message: "XPath did not match any element on the page."
+      };
+    }
+
+    triggerElementInteraction(xpathElement);
+    return {
+      clicked: true,
+      message: "Clicked the matching XPath element."
+    };
+  }
+
   const visited = new Set();
   const queue = [document];
 
@@ -461,6 +638,26 @@ if (!globalThis.__autoClickerLoaded) {
     clicked: false,
     message: "Selector was not found on the page."
   };
+  }
+
+  function looksLikeXPath(selector) {
+  const trimmed = selector.trim();
+  return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
+  }
+
+  function queryXPath(selector) {
+  try {
+    const result = document.evaluate(
+      selector,
+      document,
+      null,
+      XPathResult.FIRST_ORDERED_NODE_TYPE,
+      null
+    );
+    return result.singleNodeValue instanceof Element ? result.singleNodeValue : null;
+  } catch {
+    return null;
+  }
   }
 
   function triggerElementInteraction(element) {
