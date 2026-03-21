@@ -1,11 +1,12 @@
 const STORAGE_KEY = "rules";
 const PICK_RESULT_KEY = "lastPickedElement";
 const DRAFT_RULE_KEY = "draftRule";
-const DEFAULT_INTERVAL_MS = 300000;
+const DEFAULT_INTERVAL_MS = 10000;
 const MIN_INTERVAL_MS = 500;
 
 const form = document.getElementById("rule-form");
 const ruleIdInput = document.getElementById("rule-id");
+const targetUrlInput = document.getElementById("target-url");
 const nameInput = document.getElementById("name");
 const urlPatternInput = document.getElementById("url-pattern");
 const selectorInput = document.getElementById("selector");
@@ -64,6 +65,7 @@ form.addEventListener("submit", async (event) => {
     name: nameInput.value.trim(),
     urlPattern: trimmedPattern,
     selector: trimmedSelector,
+    targetUrl: getTargetUrlFromForm(),
     activateTab: activateTabInput.checked,
     intervalMs,
     enabled: enabledInput.checked
@@ -91,6 +93,7 @@ useCurrentSiteButton.addEventListener("click", () => {
   }
 
   urlPatternInput.value = defaultPatternFor(activeTab.url);
+  targetUrlInput.value = activeTab.url;
   setStatus("Filled in the current site.");
 });
 
@@ -157,6 +160,8 @@ function renderRules() {
     const selector = fragment.querySelector(".rule-selector");
     const interval = fragment.querySelector(".rule-interval");
     const badge = fragment.querySelector(".rule-badge");
+    const selectorKind = fragment.querySelector(".rule-selector-kind");
+    const behavior = fragment.querySelector(".rule-behavior");
     const editButton = fragment.querySelector(".edit-rule");
     const testButton = fragment.querySelector(".test-existing-rule");
     const deleteButton = fragment.querySelector(".delete-rule");
@@ -167,6 +172,12 @@ function renderRules() {
     interval.textContent = `Every ${formatInterval(rule.intervalMs)}`;
     badge.textContent = rule.enabled ? "Enabled" : "Disabled";
     badge.dataset.state = rule.enabled ? "enabled" : "disabled";
+    selectorKind.textContent = looksLikeXPath(rule.selector) ? "XPath" : "CSS";
+    behavior.textContent = rule.targetUrl
+      ? "Reopens closed tab"
+      : rule.activateTab
+        ? "Activates before click"
+        : "Runs on current page";
 
     editButton.addEventListener("click", () => {
       populateForm(rule);
@@ -208,6 +219,7 @@ function renderRules() {
 
 function populateForm(rule) {
   ruleIdInput.value = rule.id;
+  targetUrlInput.value = rule.targetUrl || "";
   nameInput.value = rule.name || "";
   urlPatternInput.value = rule.urlPattern;
   selectorInput.value = rule.selector;
@@ -218,6 +230,7 @@ function populateForm(rule) {
 
 function clearForm() {
   ruleIdInput.value = "";
+  targetUrlInput.value = activeTab?.url || "";
   nameInput.value = "";
   selectorInput.value = "";
   activateTabInput.checked = false;
@@ -229,6 +242,7 @@ function clearForm() {
 function getDraftRuleFromForm() {
   return {
     id: ruleIdInput.value.trim(),
+    targetUrl: getTargetUrlFromForm(),
     name: nameInput.value.trim(),
     urlPattern: urlPatternInput.value.trim(),
     selector: selectorInput.value.trim(),
@@ -240,6 +254,7 @@ function getDraftRuleFromForm() {
 
 function setStatus(message, isError = false) {
   statusElement.textContent = message;
+  statusElement.dataset.state = isError ? "error" : "success";
   statusElement.style.color = isError ? "#9f2d1f" : "#1f6f43";
 }
 
@@ -260,6 +275,7 @@ function normalizeRules(value) {
       name: String(rule.name || "").trim(),
       urlPattern: String(rule.urlPattern || "").trim(),
       selector: String(rule.selector || "").trim(),
+      targetUrl: String(rule.targetUrl || "").trim(),
       activateTab: Boolean(rule.activateTab),
       intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
       enabled: Boolean(rule.enabled)
@@ -317,8 +333,10 @@ async function loadPickedElement() {
 
   selectorInput.value = picked.selector;
   if (typeof picked.url === "string" && picked.url) {
+    targetUrlInput.value = picked.url;
     urlPatternInput.value = defaultPatternFor(picked.url);
   } else if (!urlPatternInput.value && activeTab?.url) {
+    targetUrlInput.value = activeTab.url;
     urlPatternInput.value = defaultPatternFor(activeTab.url);
   }
 
@@ -345,6 +363,7 @@ async function loadDraftRule() {
 
   populateForm({
     id: String(draft.id || ""),
+    targetUrl: String(draft.targetUrl || "").trim(),
     name: String(draft.name || "").trim(),
     urlPattern: String(draft.urlPattern || "").trim(),
     selector: String(draft.selector || "").trim(),
@@ -381,4 +400,18 @@ async function sendToActiveTab(message) {
 
     return chrome.tabs.sendMessage(activeTab.id, message);
   }
+}
+
+function getTargetUrlFromForm() {
+  const explicitTarget = targetUrlInput.value.trim();
+  if (explicitTarget) {
+    return explicitTarget;
+  }
+
+  return activeTab?.url || "";
+}
+
+function looksLikeXPath(selector) {
+  const trimmed = String(selector || "").trim();
+  return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
 }

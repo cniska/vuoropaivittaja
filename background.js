@@ -1,3 +1,5 @@
+const STORAGE_KEY = "rules";
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "activate-sender-tab") {
     void activateSenderTab(sender)
@@ -16,6 +18,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   return false;
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  void ensureOpenTabsForEnabledRules();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  void ensureOpenTabsForEnabledRules();
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes[STORAGE_KEY]) {
+    void ensureOpenTabsForEnabledRules();
+  }
+});
+
+chrome.tabs.onRemoved.addListener(() => {
+  void ensureOpenTabsForEnabledRules();
 });
 
 async function activateSenderTab(sender) {
@@ -62,6 +82,70 @@ async function testRuleInTab(tabId, rule) {
     ok: false,
     error: "This rule does not match the current page or embedded app frame."
   };
+}
+
+async function ensureOpenTabsForEnabledRules() {
+  const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
+  const rules = normalizeRules(stored[STORAGE_KEY]);
+  const enabledRules = rules.filter((rule) => rule.enabled && rule.targetUrl);
+  if (!enabledRules.length) {
+    return;
+  }
+
+  const openTabs = await chrome.tabs.query({});
+  for (const rule of enabledRules) {
+    const hasMatchingTab = openTabs.some((tab) =>
+      typeof tab.url === "string" && urlMatches(rule.urlPattern, tab.url)
+    );
+
+    if (hasMatchingTab) {
+      continue;
+    }
+
+    const createdTab = await chrome.tabs.create({
+      url: rule.targetUrl,
+      active: true
+    });
+    openTabs.push(createdTab);
+  }
+}
+
+function normalizeRules(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((rule) => rule && typeof rule === "object")
+    .map((rule) => ({
+      id: String(rule.id || ""),
+      name: String(rule.name || "").trim(),
+      urlPattern: String(rule.urlPattern || "").trim(),
+      selector: String(rule.selector || "").trim(),
+      targetUrl: String(rule.targetUrl || "").trim(),
+      activateTab: Boolean(rule.activateTab),
+      intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
+      enabled: Boolean(rule.enabled)
+    }))
+    .filter((rule) => rule.id && rule.urlPattern && rule.selector);
+}
+
+function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
+  const directValue = Number(intervalMs);
+  if (Number.isFinite(directValue)) {
+    return Math.max(500, directValue);
+  }
+
+  const legacyMinutes = Number(legacyIntervalMinutes);
+  if (Number.isFinite(legacyMinutes)) {
+    return Math.max(500, legacyMinutes * 60 * 1000);
+  }
+
+  return 10000;
+}
+
+function urlMatches(pattern, url) {
+  return String(url || "").toLowerCase().includes(String(pattern || "").toLowerCase());
 }
 
 function testRuleInFrame(rule) {

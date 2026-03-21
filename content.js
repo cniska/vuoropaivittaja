@@ -3,7 +3,7 @@ if (!globalThis.__autoClickerLoaded) {
 
   const STORAGE_KEY = "rules";
   const PICK_RESULT_KEY = "lastPickedElement";
-  const DEFAULT_INTERVAL_MS = 300000;
+  const DEFAULT_INTERVAL_MS = 10000;
   const MIN_INTERVAL_MS = 500;
 
   const activeTimers = new Map();
@@ -132,6 +132,7 @@ if (!globalThis.__autoClickerLoaded) {
       name: String(rule.name || "").trim(),
       urlPattern: String(rule.urlPattern || "").trim(),
       selector: String(rule.selector || "").trim(),
+      targetUrl: String(rule.targetUrl || "").trim(),
       activateTab: Boolean(rule.activateTab),
       intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
       enabled: Boolean(rule.enabled)
