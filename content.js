@@ -106,7 +106,7 @@ if (!globalThis.__autoClickerLoaded) {
     }
 
     const timerId = window.setInterval(() => {
-      clickSelectorInPage(rule.selector);
+      void runRule(rule);
     }, rule.intervalMs);
 
     activeTimers.set(rule.id, timerId);
@@ -125,6 +125,7 @@ if (!globalThis.__autoClickerLoaded) {
       name: String(rule.name || "").trim(),
       urlPattern: String(rule.urlPattern || "").trim(),
       selector: String(rule.selector || "").trim(),
+      activateTab: Boolean(rule.activateTab),
       intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
       enabled: Boolean(rule.enabled)
     }))
@@ -147,6 +148,19 @@ if (!globalThis.__autoClickerLoaded) {
 
   function urlMatches(pattern, url) {
   return url.toLowerCase().includes(pattern.toLowerCase());
+  }
+
+  async function runRule(rule) {
+  if (rule.activateTab) {
+    const activated = await requestTabActivation();
+    if (!activated) {
+      return;
+    }
+
+    await delay(120);
+  }
+
+  clickSelectorInPage(rule.selector);
   }
 
   function startPicker() {
@@ -507,5 +521,20 @@ if (!globalThis.__autoClickerLoaded) {
     }
 
     element.dispatchEvent(new EventType(type, options));
+  }
+
+  async function requestTabActivation() {
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "activate-sender-tab" });
+    return Boolean(response?.ok);
+  } catch {
+    return false;
+  }
+  }
+
+  function delay(durationMs) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, durationMs);
+  });
   }
 }

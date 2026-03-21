@@ -8,6 +8,7 @@ const ruleIdInput = document.getElementById("rule-id");
 const nameInput = document.getElementById("name");
 const urlPatternInput = document.getElementById("url-pattern");
 const selectorInput = document.getElementById("selector");
+const activateTabInput = document.getElementById("activate-tab");
 const intervalInput = document.getElementById("interval");
 const enabledInput = document.getElementById("enabled");
 const pickElementButton = document.getElementById("pick-element");
@@ -61,6 +62,7 @@ form.addEventListener("submit", async (event) => {
     name: nameInput.value.trim(),
     urlPattern: trimmedPattern,
     selector: trimmedSelector,
+    activateTab: activateTabInput.checked,
     intervalMs,
     enabled: enabledInput.checked
   };
@@ -103,6 +105,7 @@ testRuleButton.addEventListener("click", async () => {
   const rule = {
     urlPattern: urlPatternInput.value.trim(),
     selector: selectorInput.value.trim(),
+    activateTab: activateTabInput.checked,
     intervalMs: clampIntervalMs(intervalInput.value),
     enabled: enabledInput.checked
   };
@@ -154,7 +157,7 @@ function renderRules() {
 
     title.textContent = rule.name || "Unnamed rule";
     url.textContent = `URL contains: ${rule.urlPattern}`;
-    selector.textContent = `Selector: ${rule.selector}`;
+    selector.textContent = `Selector: ${rule.selector}${rule.activateTab ? " (activates tab)" : ""}`;
     interval.textContent = `Every ${formatInterval(rule.intervalMs)}`;
     badge.textContent = rule.enabled ? "Enabled" : "Disabled";
     badge.dataset.state = rule.enabled ? "enabled" : "disabled";
@@ -201,6 +204,7 @@ function populateForm(rule) {
   nameInput.value = rule.name || "";
   urlPatternInput.value = rule.urlPattern;
   selectorInput.value = rule.selector;
+  activateTabInput.checked = Boolean(rule.activateTab);
   intervalInput.value = String(rule.intervalMs);
   enabledInput.checked = rule.enabled;
 }
@@ -209,6 +213,7 @@ function clearForm() {
   ruleIdInput.value = "";
   nameInput.value = "";
   selectorInput.value = "";
+  activateTabInput.checked = false;
   intervalInput.value = String(DEFAULT_INTERVAL_MS);
   enabledInput.checked = true;
   urlPatternInput.value = activeTab?.url ? defaultPatternFor(activeTab.url) : "";
@@ -236,6 +241,7 @@ function normalizeRules(value) {
       name: String(rule.name || "").trim(),
       urlPattern: String(rule.urlPattern || "").trim(),
       selector: String(rule.selector || "").trim(),
+      activateTab: Boolean(rule.activateTab),
       intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
       enabled: Boolean(rule.enabled)
     }))

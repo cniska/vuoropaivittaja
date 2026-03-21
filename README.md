@@ -4,6 +4,7 @@ This Chrome extension lets you save multiple auto-click rules. Each rule has:
 
 - A `URL contains` value to decide which website it should run on
 - A CSS selector for the button or element to click
+- An optional setting to activate the tab before clicking
 - Its own interval in milliseconds
 - An enabled or disabled state
 
