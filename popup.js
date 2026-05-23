@@ -261,7 +261,6 @@ function getDraftRuleFromForm() {
 function setStatus(message, isError = false) {
   statusElement.textContent = message;
   statusElement.dataset.state = isError ? "error" : "success";
-  statusElement.style.color = isError ? "#9f2d1f" : "#1f6f43";
 }
 
 async function persistRules() {
