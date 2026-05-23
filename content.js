@@ -7,6 +7,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
   let lastUrl = location.href;
   let pickerState = null;
+  let monitoringSession = 0;
 
   void initialize();
 
@@ -69,9 +70,51 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const settings = normalizeSettings(stored.settings);
     const rule = normalizeRule(stored.rule);
 
+    monitoringSession += 1;
+    const session = monitoringSession;
+
     if (settings.enabled && rule && urlMatches(rule.urlPattern, location.href)) {
-      console.log("[Vuoropäivittäjä] monitoring active");
+      void startMonitoring(settings, rule, session);
     }
+  }
+
+  async function startMonitoring(settings, rule, session) {
+    while (monitoringSession === session) {
+      await delay(randomInterval(settings.minIntervalMs, settings.maxIntervalMs));
+      if (monitoringSession !== session) break;
+
+      const before = takeSnapshot(rule.listSelector);
+      clickSelectorInPage(rule.selector);
+
+      await delay(1500);
+      if (monitoringSession !== session) break;
+
+      const after = takeSnapshot(rule.listSelector);
+      if (JSON.stringify(after) !== JSON.stringify(before)) {
+        fireChangeNotification();
+      }
+    }
+  }
+
+  function takeSnapshot(listSelector) {
+    if (listSelector) {
+      const list = document.querySelector(listSelector);
+      if (list) {
+        const items = Array.from(list.querySelectorAll('[role="listitem"]'));
+        if (items.length > 0) {
+          return items.map((item) => item.innerText);
+        }
+      }
+    }
+    return [document.body.innerText];
+  }
+
+  function randomInterval(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function fireChangeNotification() {
+    chrome.runtime.sendMessage({ type: "change-detected" });
   }
 
   function patchHistoryMethod(methodName) {
