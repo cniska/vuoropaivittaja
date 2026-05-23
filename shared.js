@@ -51,6 +51,21 @@
       .includes(String(pattern || "").toLowerCase());
   }
 
+  function shouldMonitorTab(settings, rule, tabUrl) {
+    return Boolean(
+      settings?.enabled && rule && urlMatches(rule.urlPattern, tabUrl)
+    );
+  }
+
+  function buildChangeAlertMessage(settings) {
+    const normalized = normalizeSettings(settings);
+    return {
+      type: "change-detected",
+      notifications: normalized.notifications,
+      sound: normalized.sound,
+    };
+  }
+
   function looksLikeXPath(selector) {
     const trimmed = String(selector || "").trim();
     return (
@@ -78,6 +93,8 @@
   const api = {
     normalizeSettings,
     normalizeRule,
+    shouldMonitorTab,
+    buildChangeAlertMessage,
     urlMatches,
     looksLikeXPath,
     isStableIdentifier,

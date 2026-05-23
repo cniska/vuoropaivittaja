@@ -1,11 +1,11 @@
 if (!globalThis.__vuoropaivittajaLoaded) {
   globalThis.__vuoropaivittajaLoaded = true;
 
-  const PICK_RESULT_KEY = "lastPickedElement";
   const {
     normalizeSettings,
     normalizeRule,
-    urlMatches,
+    shouldMonitorTab,
+    buildChangeAlertMessage,
     looksLikeXPath,
     isStableIdentifier,
   } = globalThis.VuoropaivittajaShared;
@@ -70,12 +70,28 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const session = monitoringSession;
 
     if (
-      settings.enabled &&
-      rule &&
-      urlMatches(rule.urlPattern, location.href)
+      (await shouldMonitorCurrentTab(settings, rule)) &&
+      findElementInPage(rule.selector)
     ) {
       void ensureListSelector(rule);
       void startMonitoring(settings, rule, session);
+    }
+  }
+
+  async function shouldMonitorCurrentTab(settings, rule) {
+    if (!settings.enabled || !rule) {
+      return false;
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "should-monitor-tab",
+        settings,
+        rule,
+      });
+      return response?.ok ? Boolean(response.shouldMonitor) : true;
+    } catch {
+      return shouldMonitorTab(settings, rule, location.href);
     }
   }
 
@@ -159,38 +175,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   }
 
   function fireChangeNotification(settings) {
-    if (settings.sound) {
-      playBeep();
-    }
-    if (settings.notifications) {
-      chrome.runtime.sendMessage({ type: "change-detected" });
-    }
-  }
-
-  function playBeep() {
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
-
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.02);
-      gain.gain.setValueAtTime(0.25, ctx.currentTime + 0.13);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.45);
-      osc.onended = () => ctx.close();
-    } catch {
-      // audio not available in this context
-    }
+    void chrome.runtime.sendMessage(buildChangeAlertMessage(settings));
   }
 
   function patchHistoryMethod(methodName) {
@@ -273,13 +258,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       event.stopImmediatePropagation();
 
       const selector = buildSelectorForElement(target);
-      await chrome.storage.local.set({
-        [PICK_RESULT_KEY]: {
-          selector,
-          url: location.href,
-          timestamp: Date.now(),
-        },
-      });
+      await chrome.runtime.sendMessage({ type: "element-picked", selector });
       stopPicker();
     };
 
@@ -366,16 +345,16 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   }
 
   function buildSelectorForElement(element) {
-    const indexedXPath = buildIndexedXPathSelector(element);
-    if (indexedXPath) {
-      return indexedXPath;
-    }
-
     const candidates = buildSelectorCandidates(element);
     for (const candidate of candidates) {
       if (isUniqueSelector(candidate, element)) {
         return candidate;
       }
+    }
+
+    const indexedXPath = buildIndexedXPathSelector(element);
+    if (indexedXPath) {
+      return indexedXPath;
     }
 
     return buildXPathSelector(element);
@@ -809,10 +788,6 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     });
     dispatchIfSupported(element, "mouseup", MouseEvent, baseOptions);
     dispatchIfSupported(element, "click", MouseEvent, baseOptions);
-
-    if (typeof element.click === "function") {
-      element.click();
-    }
   }
 
   function dispatchIfSupported(element, type, EventType, options) {

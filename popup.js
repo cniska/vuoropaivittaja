@@ -19,6 +19,7 @@ const testSelectorButton = document.getElementById("test-selector");
 const statusEl = document.getElementById("status");
 
 let activeTab = null;
+let pickedFrameId = null;
 let statusTimer = null;
 
 void initialize();
@@ -45,6 +46,9 @@ soundInput.addEventListener("change", autosaveSettings);
 minIntervalInput.addEventListener("change", autosaveSettings);
 maxIntervalInput.addEventListener("change", autosaveSettings);
 selectorInput.addEventListener("change", autosaveRule);
+selectorInput.addEventListener("input", () => {
+  pickedFrameId = null;
+});
 
 function autosaveSettings() {
   const minSec = Math.max(
@@ -107,10 +111,13 @@ testSelectorButton.addEventListener("click", async () => {
   }
 
   try {
-    const response = await sendToActiveTab({
-      type: "test-rule",
-      rule: { urlPattern: urlPatternFromTab(), selector },
-    });
+    const response = await sendToActiveTab(
+      {
+        type: "test-rule",
+        rule: { urlPattern: urlPatternFromTab(), selector },
+      },
+      { frameId: pickedFrameId }
+    );
     setStatus(
       response?.ok
         ? response.message
@@ -137,11 +144,15 @@ function fillRule(rule) {
 
 function setStatus(message, isError = false) {
   clearTimeout(statusTimer);
-  statusEl.textContent = message;
+  statusEl.textContent = "";
   statusEl.dataset.state = isError ? "error" : "success";
   statusEl.classList.add("is-visible");
+  window.requestAnimationFrame(() => {
+    statusEl.textContent = message;
+  });
   statusTimer = window.setTimeout(() => {
     statusEl.classList.remove("is-visible");
+    statusEl.textContent = "";
   }, STATUS_DISMISS_MS);
 }
 
@@ -174,21 +185,30 @@ async function loadPickedElement() {
   if (!picked?.selector) return;
 
   selectorInput.value = picked.selector;
+  pickedFrameId =
+    picked.tabId === activeTab?.id && Number.isInteger(picked.frameId)
+      ? picked.frameId
+      : null;
+  autosaveRule();
   await chrome.storage.local.remove(PICK_RESULT_KEY);
   setStatus("Painike valittu sivulta.");
 }
 
-async function sendToActiveTab(message) {
+async function sendToActiveTab(message, options = {}) {
   if (!activeTab?.id) throw new Error("Ei aktiivista välilehteä.");
+  const sendOptions =
+    Number.isInteger(options.frameId) && options.frameId >= 0
+      ? { frameId: options.frameId }
+      : undefined;
 
   try {
-    return await chrome.tabs.sendMessage(activeTab.id, message);
+    return await chrome.tabs.sendMessage(activeTab.id, message, sendOptions);
   } catch (error) {
     if (!error?.message?.includes("Receiving end does not exist")) throw error;
     await chrome.scripting.executeScript({
       target: { tabId: activeTab.id, allFrames: true },
       files: ["content.js"],
     });
-    return chrome.tabs.sendMessage(activeTab.id, message);
+    return chrome.tabs.sendMessage(activeTab.id, message, sendOptions);
   }
 }
