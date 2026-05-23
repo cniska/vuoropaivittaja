@@ -111,6 +111,43 @@ Implement shared pure functions for code reuse and tests:
 
 The popup is a compact settings panel with two sections and an autosave notice.
 
+### Layout mockup
+
+```text
++--------------------------------------+
+| Vuoropäivittäjä                      |
++--------------------------------------+
+| ASETUKSET                            |
+|                                      |
+| Tarkkailu päällä                 [ ] |
+| Työpöytäilmoitus                 [ ] |
+| Äänimerkki                       [ ] |
+|                                      |
+| Päivitysväli (s)                     |
+| +------------+  +------------+       |
+| | Min     30 |  | Max     90 |       |
+| +------------+  +------------+       |
++--------------------------------------+
+| KOHDE                                |
+|                                      |
+| Seurattava sivu                      |
+| +----------------------------------+ |
+| | https://apps.powerapps.com       | |
+| +----------------------------------+ |
+|                                      |
+| Painikkeen valitsin                  |
+| +----------------------------------+ |
+| | button[aria-label="..."]         | |
+| +----------------------------------+ |
+|                                      |
+| [ Valitse sivulta ] [ Testaa ]       |
++--------------------------------------+
+| Muutokset tallentuvat automaattisesti|
++--------------------------------------+
+| Toasti nousee alareunan päälle       |
++--------------------------------------+
+```
+
 ### Controls
 
 - Toggle: `Tarkkailu päällä` -> `settings.enabled`
