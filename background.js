@@ -14,6 +14,12 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes.lastPickedElement?.newValue) {
+    void chrome.action.openPopup().catch(() => {});
+  }
+});
+
 chrome.tabs.onRemoved.addListener(() => {
   void disableIfNoMatchingTab();
 });

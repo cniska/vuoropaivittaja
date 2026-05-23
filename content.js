@@ -33,24 +33,16 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     }
 
     if (message?.type === "test-rule") {
-      const rule = normalizeRule(message.rule);
-      if (!rule) {
+      const selector = String(message.rule?.selector || "").trim();
+      if (!selector) {
         sendResponse({
           ok: false,
-          error: "Syötä kelvollinen URL-kuvio ja valitsin ensin.",
+          error: "Syötä valitsin ensin.",
         });
         return false;
       }
 
-      if (!urlMatches(rule.urlPattern, location.href)) {
-        sendResponse({
-          ok: false,
-          error: "Tämän välilehden URL ei täsmää säännön kanssa.",
-        });
-        return false;
-      }
-
-      const result = clickSelectorInPage(rule.selector);
+      const result = clickSelectorInPage(selector);
       sendResponse(
         result.clicked
           ? { ok: true, message: "Painike klikattu onnistuneesti." }
@@ -301,7 +293,6 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const handlePointerDown = (event) => {
       const target = getSelectableElement(event);
       if (target) {
-        event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
       }

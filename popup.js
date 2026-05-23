@@ -4,6 +4,8 @@ const SETTINGS_KEY = "settings";
 const RULE_KEY = "rule";
 const PICK_RESULT_KEY = "lastPickedElement";
 const DRAFT_KEY = "draftRule";
+const MIN_INTERVAL_S = 2;
+const STATUS_DISMISS_MS = 5000;
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -14,10 +16,10 @@ const targetUrlDisplay = document.getElementById("target-url-display");
 const selectorInput = document.getElementById("selector");
 const pickElementButton = document.getElementById("pick-element");
 const testSelectorButton = document.getElementById("test-selector");
-const saveButton = document.getElementById("save");
 const statusEl = document.getElementById("status");
 
 let activeTab = null;
+let statusTimer = null;
 
 void initialize();
 
@@ -37,21 +39,23 @@ async function initialize() {
   await loadPickedElement();
 }
 
-saveButton.addEventListener("click", async () => {
-  const minSec = Number(minIntervalInput.value);
-  const maxSec = Number(maxIntervalInput.value);
+enabledInput.addEventListener("change", autosaveSettings);
+notificationsInput.addEventListener("change", autosaveSettings);
+soundInput.addEventListener("change", autosaveSettings);
+minIntervalInput.addEventListener("change", autosaveSettings);
+maxIntervalInput.addEventListener("change", autosaveSettings);
+selectorInput.addEventListener("change", autosaveRule);
 
-  if (!Number.isFinite(minSec) || minSec < 2) {
-    setStatus("Minimitarkkailuväli on vähintään 2 sekuntia.", true);
-    return;
-  }
+function autosaveSettings() {
+  const minSec = Math.max(
+    MIN_INTERVAL_S,
+    Number(minIntervalInput.value) || MIN_INTERVAL_S
+  );
+  const maxSec = Math.max(minSec, Number(maxIntervalInput.value) || minSec);
+  minIntervalInput.value = String(minSec);
+  maxIntervalInput.value = String(maxSec);
 
-  if (!Number.isFinite(maxSec) || maxSec < minSec) {
-    setStatus("Maksimitarkkailuväli ei voi olla pienempi kuin minimi.", true);
-    return;
-  }
-
-  await chrome.storage.local.set({
+  void chrome.storage.local.set({
     [SETTINGS_KEY]: {
       enabled: enabledInput.checked,
       notifications: notificationsInput.checked,
@@ -59,15 +63,18 @@ saveButton.addEventListener("click", async () => {
       minIntervalMs: minSec * 1000,
       maxIntervalMs: maxSec * 1000,
     },
+  });
+}
+
+function autosaveRule() {
+  void chrome.storage.local.set({
     [RULE_KEY]: {
       urlPattern: urlPatternFromTab(),
       selector: selectorInput.value.trim(),
       listSelector: "",
     },
   });
-
-  setStatus("Tallennettu.");
-});
+}
 
 pickElementButton.addEventListener("click", async () => {
   if (!activeTab?.id) {
@@ -129,8 +136,13 @@ function fillRule(rule) {
 }
 
 function setStatus(message, isError = false) {
+  clearTimeout(statusTimer);
   statusEl.textContent = message;
   statusEl.dataset.state = isError ? "error" : "success";
+  statusEl.classList.add("is-visible");
+  statusTimer = window.setTimeout(() => {
+    statusEl.classList.remove("is-visible");
+  }, STATUS_DISMISS_MS);
 }
 
 function urlPatternFromTab() {
