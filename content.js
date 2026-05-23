@@ -98,8 +98,18 @@ if (!globalThis.__vuoropaivittajaLoaded) {
           rule && findElementInPage(rule.selector)
         )
       ) {
-        void ensureListSelector(rule);
-        void startMonitoring(settings, rule, session);
+        void ensureListSelector(rule).catch((error) => {
+          logger.warn("List selector detection failed", {
+            event: "list-selector-failed",
+            message: String(error?.message || error || ""),
+          });
+        });
+        void startMonitoring(settings, rule, session).catch((error) => {
+          logger.warn("Monitoring loop failed", {
+            event: "monitoring-failed",
+            message: String(error?.message || error || ""),
+          });
+        });
       }
     } catch (error) {
       logger.warn("Content script initialization failed", {
@@ -271,7 +281,9 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
   function startPicker() {
     stopPicker();
-    logger.info("Picker started on page", { event: "picker-started" });
+    if (isTopFrame()) {
+      logger.info("Picker started on page", { event: "picker-started" });
+    }
 
     const overlay = document.createElement("div");
     overlay.dataset.autoClickerOverlay = "true";
@@ -376,7 +388,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
     pickerState.cleanup();
     pickerState = null;
-    logger.info("Picker closed on page", { event: "picker-closed" });
+    if (isTopFrame()) {
+      logger.info("Picker closed on page", { event: "picker-closed" });
+    }
+  }
+
+  function isTopFrame() {
+    return window.top === window;
   }
 
   function getSelectableElement(event) {
