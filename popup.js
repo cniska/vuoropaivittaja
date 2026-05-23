@@ -45,12 +45,14 @@ notificationsInput.addEventListener("change", autosaveSettings);
 soundInput.addEventListener("change", autosaveSettings);
 minIntervalInput.addEventListener("change", autosaveSettings);
 maxIntervalInput.addEventListener("change", autosaveSettings);
-selectorInput.addEventListener("change", autosaveRule);
+selectorInput.addEventListener("change", () => {
+  void autosaveRule();
+});
 selectorInput.addEventListener("input", () => {
   pickedFrameId = null;
 });
 
-function autosaveSettings() {
+async function autosaveSettings() {
   const minSec = Math.max(
     MIN_INTERVAL_S,
     Number(minIntervalInput.value) || MIN_INTERVAL_S
@@ -59,7 +61,7 @@ function autosaveSettings() {
   minIntervalInput.value = String(minSec);
   maxIntervalInput.value = String(maxSec);
 
-  void chrome.storage.local.set({
+  await chrome.storage.local.set({
     [SETTINGS_KEY]: {
       enabled: enabledInput.checked,
       notifications: notificationsInput.checked,
@@ -68,16 +70,20 @@ function autosaveSettings() {
       maxIntervalMs: maxSec * 1000,
     },
   });
+  setStatus("Tallennettu.");
 }
 
-function autosaveRule() {
-  void chrome.storage.local.set({
+async function autosaveRule(showToast = true) {
+  await chrome.storage.local.set({
     [RULE_KEY]: {
       urlPattern: urlPatternFromTab(),
       selector: selectorInput.value.trim(),
       listSelector: "",
     },
   });
+  if (showToast) {
+    setStatus("Tallennettu.");
+  }
 }
 
 pickElementButton.addEventListener("click", async () => {
@@ -111,6 +117,7 @@ testSelectorButton.addEventListener("click", async () => {
   }
 
   try {
+    setStatus("Testataan...");
     const response = await sendToActiveTab(
       {
         type: "test-rule",
@@ -189,7 +196,7 @@ async function loadPickedElement() {
     picked.tabId === activeTab?.id && Number.isInteger(picked.frameId)
       ? picked.frameId
       : null;
-  autosaveRule();
+  await autosaveRule(false);
   await chrome.storage.local.remove(PICK_RESULT_KEY);
   setStatus("Painike valittu sivulta.");
 }

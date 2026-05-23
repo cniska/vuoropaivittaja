@@ -9,8 +9,12 @@ let creatingOffscreenDocument = null;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "change-detected") {
-    void fireChangeAlert(message);
-    return false;
+    void fireChangeAlert(message)
+      .catch(() => {})
+      .finally(() => {
+        sendResponse({ ok: true });
+      });
+    return true;
   }
 
   if (message?.type === "element-picked") {

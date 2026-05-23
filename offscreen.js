@@ -1,16 +1,29 @@
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "play-alert-sound") {
-    playBeep();
+    void playBeep().finally(() => {
+      sendResponse({ ok: true });
+    });
+    return true;
   }
+
+  return false;
 });
 
-function playBeep() {
+async function playBeep() {
   const AudioContextType = window.AudioContext || window.webkitAudioContext;
   if (typeof AudioContextType !== "function") {
     return;
   }
 
   const ctx = new AudioContextType();
+  if (ctx.state === "suspended") {
+    try {
+      await ctx.resume();
+    } catch {
+      return;
+    }
+  }
+
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
 
