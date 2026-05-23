@@ -1,199 +1,375 @@
-# Vuoropäivittäjä — Feature Specification
+# Vuoropäivittäjä rebuild specification
 
-## Overview
+## Purpose
 
-Vuoropäivittäjä is a Chrome extension that monitors a booking or scheduling page for newly available slots. It clicks a configured refresh button at a random interval, compares the page content before and after each click, and notifies the user (desktop notification and/or sound) when the content changes — indicating that new slots may have appeared.
+Vuoropäivittäjä is a Chrome Manifest V3 extension that monitors one booking or scheduling page for changed availability. It periodically clicks a configured refresh button, compares page snapshots before and after the click, and alerts the user when the snapshot changes.
 
-The extension is configured once for a single URL and button, then runs silently in the background. The popup is a simple settings panel, not a rule manager.
+This document is the rebuild contract. A coding agent should be able to recreate the product from this file without reading the existing implementation.
 
-### Out of scope (future)
+## Product contract
 
-- Listing or storing found slots.
-- History of past notifications.
-- Multiple monitored sites simultaneously.
-- Sound or notification testing (e.g. "test audio" button).
-- Manual URL text input — the URL is always taken from the active tab.
+- The extension supports one monitored site and one refresh button at a time.
+- The monitored site is always derived from the active browser tab origin. The user never enters a URL manually.
+- The extension detects page changes, not semantically verified new appointments. A changed slot list means "new slots may be available."
+- Monitoring can run while the tab is in the background.
+- Closing the last matching monitored tab disables monitoring automatically.
+- All user-facing text must be Finnish.
 
----
+## Out of scope
 
-## Platform
+- Multiple monitored sites.
+- Slot history or storage of found slots.
+- Semantic parsing of appointments.
+- Manual URL input.
+- A dedicated "test sound" or "test notification" button.
+- A build pipeline or bundled dependencies.
 
-- Chrome Extension, Manifest Version 3
-- Minimum Chrome version: 120
-- No build step — plain JavaScript files loaded directly by Chrome
-- No external dependencies
+## Platform and files
 
----
+- Chrome Extension Manifest V3.
+- Minimum Chrome version: 120.
+- Plain ES2020+ JavaScript loaded directly by Chrome.
+- No external runtime dependencies.
+- Tests use Node's built-in test runner and run with `pnpm test`.
 
-## Data Model
+Required files:
+
+- `manifest.json`
+- `background.js`
+- `content.js`
+- `popup.html`
+- `popup.css`
+- `popup.js`
+- `shared.js`
+- `offscreen.html`
+- `offscreen.js`
+- `shared.test.js`
+- `icon.png`
+
+`shared.js` must export the same API to both `globalThis.VuoropaivittajaShared` and `module.exports`.
+
+## Manifest contract
+
+The manifest must include:
+
+- `manifest_version: 3`
+- Name: `Vuoropäivittäjä`
+- Default popup: `popup.html`
+- Default title: `Vuoropäivittäjä`
+- Default icon: `icon.png`
+- Background service worker: `background.js`
+- Content scripts: `shared.js` and `content.js`
+- Content script matches: `<all_urls>`
+- Content script options: `all_frames: true`, `run_at: "document_idle"`
+- Permissions: `notifications`, `offscreen`, `scripting`, `storage`, `tabs`
+- Host permissions: `<all_urls>`
+
+## Storage model
 
 All persistent state lives in `chrome.storage.local`.
 
-### Settings object — key `"settings"`
+### `settings`
 
-| Field | Type | Default | Description |
+| Field | Type | Default | Rules |
 |---|---|---|---|
-| `enabled` | boolean | `false` | Master on/off switch for monitoring |
-| `notifications` | boolean | `true` | Send a desktop notification when a change is detected |
-| `sound` | boolean | `true` | Play an audible alert when a change is detected |
-| `minIntervalMs` | number | `30000` | Minimum ms between refresh clicks (min `2000`) |
-| `maxIntervalMs` | number | `90000` | Maximum ms between refresh clicks (must be ≥ `minIntervalMs`) |
+| `enabled` | boolean | `false` | Master monitoring toggle |
+| `notifications` | boolean | `true` | Desktop notification toggle |
+| `sound` | boolean | `true` | Audible alert toggle |
+| `minIntervalMs` | number | `30000` | Minimum `2000` |
+| `maxIntervalMs` | number | `90000` | Must be at least `minIntervalMs` |
 
-### Rule object — key `"rule"`
+### `rule`
 
-| Field | Type | Default | Description |
+| Field | Type | Default | Rules |
 |---|---|---|---|
-| `urlPattern` | string | `""` | Case-insensitive substring matched against the tab URL |
-| `selector` | string | `""` | CSS selector or XPath expression for the button to click |
-| `listSelector` | string | `""` | Auto-detected CSS selector for the slot list container; never shown in the UI |
+| `urlPattern` | string | `""` | Active tab origin, matched case-insensitively against the top-level tab URL |
+| `selector` | string | `""` | CSS selector or XPath for the refresh button |
+| `listSelector` | string | `""` | Auto-detected selector for the list/grid container; hidden from UI |
 
-A rule with an empty `urlPattern` or empty `selector` is not active.
+A rule is inactive if `urlPattern` or `selector` is empty.
 
-`listSelector` is derived automatically when the button selector is saved: the content script resolves the button element, walks up its ancestors until it finds one whose subtree contains a `[role="list"]` or `[role="grid"]` that is not inside the button itself, then builds a CSS selector for that element. The result is stored silently in the rule and never exposed in the UI.
+### Temporary keys
 
-### Temporary storage keys
-
-| Key | Purpose | Lifetime |
+| Key | Shape | Lifetime |
 |---|---|---|
-| `lastPickedElement` | Selector written by the element picker | Consumed once when the popup opens |
-| `draftRule` | Form state saved before the picker closes the popup | Consumed once when the popup reopens |
+| `draftRule` | `{ selector }` | Saved before picker closes popup; consumed once when popup opens |
+| `lastPickedElement` | `{ selector, url, frameId, tabId, timestamp }` | Written after picker selection; consumed once when popup opens |
 
----
+## Shared utilities
 
-## Features
+Implement shared pure functions for code reuse and tests:
 
-### 1. Background monitoring
+- `normalizeSettings(value)`: Returns defaults, coerces booleans, clamps intervals.
+- `normalizeRule(value)`: Returns `null` for invalid input; trims `urlPattern`, `selector`, and `listSelector`.
+- `urlMatches(pattern, url)`: Case-insensitive substring match.
+- `shouldMonitorTab(settings, rule, tabUrl)`: True only when settings are enabled, rule is valid, and the top-level tab URL matches.
+- `buildChangeAlertMessage(settings)`: Returns `{ type: "change-detected", notifications, sound }` using normalized settings.
+- `looksLikeXPath(selector)`: True when trimmed selector starts with `/`, `(`, or `./`.
+- `isStableIdentifier(value)`: Reject empty values, whitespace, 3+ consecutive digits, `/^f[a-z0-9]+$/i`, `__` prefix, and values containing `buttoncanvas`.
 
-**As a user**, I want the extension to repeatedly refresh a page and alert me when new slots appear, so I can book immediately without watching the screen.
+## Popup behavior
 
-#### Acceptance criteria
+The popup is a compact settings panel with two sections and an autosave notice.
 
-- When `enabled` is `true` and the rule has a valid `urlPattern` and `selector`, the content script sets up a repeating refresh cycle.
-- The interval for each cycle is a random value in the range `[minIntervalMs, maxIntervalMs]`, chosen freshly each tick.
-- On each tick:
-  1. Take a snapshot: if `listSelector` matches an element, collect the `innerText` of each `[role="listitem"]` child as an ordered array; otherwise fall back to `document.body.innerText` as a single-element array.
-  2. Click the configured button (see Element clicking below).
-  3. Wait a short settle period (1–2 s) for the page to update.
-  4. Take a new snapshot using the same source.
-  5. If the two snapshots differ (compared as JSON strings), fire a change notification (see Feature 3).
-  6. Update the stored baseline to the new snapshot.
-- Clicks fire regardless of tab visibility — the extension is designed to run in the background.
-- In multi-frame pages, a frame may start monitoring when the top-level tab URL matches `urlPattern` and that frame contains the configured selector. This allows embedded PowerApps canvases to be monitored even when the iframe URL differs from the browser address bar.
-- Re-initialisation occurs on URL change (hash, popstate, pushState, replaceState) and on `visibilitychange`.
-- The content script guards against running twice per page via a `__vuoropaivittajaLoaded` flag on `globalThis`.
+### Controls
 
-#### Element clicking
+- Toggle: `Tarkkailu päällä` -> `settings.enabled`
+- Toggle: `Työpöytäilmoitus` -> `settings.notifications`
+- Toggle: `Äänimerkki` -> `settings.sound`
+- Number input: `Min` under `Päivitysväli (s)` -> `settings.minIntervalMs / 1000`
+- Number input: `Max` under `Päivitysväli (s)` -> `settings.maxIntervalMs / 1000`
+- Read-only value: `Seurattava sivu` -> active tab origin or `Ei asetettu`
+- Text input: `Painikkeen valitsin` -> `rule.selector`
+- Button: `Valitse sivulta`
+- Button: `Testaa`
+- Footer text: `Muutokset tallentuvat automaattisesti`
+- Toast status area for success and error messages.
 
-- If the selector starts with `/`, `(`, or `./`, it is treated as XPath; otherwise as CSS.
-- **CSS**: `querySelector` on `document`, then BFS into shadow roots if not found.
-- **XPath**: `document.evaluate` with `FIRST_ORDERED_NODE_TYPE`.
-- The element is scrolled into view, focused, then receives one synthetic pointer/mouse activation sequence: `pointerover`, `mouseover`, `pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`.
+### Autosave
 
----
+- On popup open, read the active tab and stored state.
+- Toggles save `settings` on `change`.
+- Interval inputs save `settings` on `change`; clamp min to 2 seconds and max to at least min.
+- Selector saves `rule` on `change`; `urlPattern` must be derived from the active tab origin at save time and `listSelector` must reset to `""`.
+- Manually editing selector clears any stored picked `frameId` hint.
+- Loading `lastPickedElement` must fill the selector, remember `frameId` only when `tabId` matches the active tab, autosave the rule, clear the temporary key, and show `Painike valittu sivulta.`
 
-### 2. Disable on tab close
+### Picker button
 
-**As a user**, I want monitoring to turn itself off if I close the monitored tab, so the extension doesn't silently run against nothing.
+- If no active tab is available, show `Avaa kohdesivusto ensin.`
+- Otherwise save `draftRule`, send `{ type: "start-picker" }` to the active tab, and close the popup.
+- If the content script is not present, inject `content.js` into all frames and retry.
+- On failure, show `Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä uudelleen.`
 
-#### Acceptance criteria
+### Test button
 
-- When any tab is removed, the background service worker checks whether `enabled` is `true` and a valid rule exists.
-- If no remaining open tab URL matches `urlPattern`, the background sets `enabled` to `false` in storage, leaving all other settings intact.
-- The content script's `storage.onChanged` listener then cancels the monitoring loop on the next tick.
+- If no active tab is available, show `Avaa kohdesivusto ensin.`
+- If selector is empty, show `Syötä valitsin ensin.`
+- Otherwise send `{ type: "test-rule", rule: { urlPattern, selector } }` to the active tab.
+- If a picked frame hint exists, send the message to that `frameId`.
+- Show the response message on success or the response error on failure.
+- If no content script responds, inject `content.js` into all frames and retry.
+- If the page still cannot be reached, show `Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.`
 
----
+### Accessibility
 
-### 3. Notifications
+- Popup language is Finnish (`lang="fi"`).
+- The app name is an `h1`.
+- Sections have accessible headings.
+- Decorative toggle tracks are `aria-hidden`.
+- The interval inputs are grouped and labelled.
+- Each number input has an accessible name.
+- The current page display uses polite live updates.
+- Toast uses `role="status"`, `aria-live="polite"`, and `aria-atomic="true"`.
 
-**As a user**, I want to be alerted immediately when a change is detected, so I can act on it quickly.
+## Content script behavior
 
-#### Acceptance criteria
+The content script runs in every frame and must guard against duplicate initialization with `globalThis.__vuoropaivittajaLoaded`.
 
-- When a page change is detected and `notifications` is `true`, the extension sends a Chrome desktop notification with the title `"Vuoropäivittäjä"` and body `"Uusia vuoroja saattaa olla saatavilla."` ("New slots may be available.").
-- When a page change is detected and `sound` is `true`, the extension plays a short audible alert (a simple beep generated via the Web Audio API — no audio file dependency).
-- Both alerts can fire independently (one can be on while the other is off).
-- Requires the `notifications` and `offscreen` permissions in the manifest.
-- Alert sound is played from an extension offscreen document so it is not blocked by the monitored page's frame, audio policy, or CSP.
+### Message handling
 
----
+- `{ type: "start-picker" }`: Start element picker and respond with success.
+- `{ type: "test-rule", rule }`: Validate non-empty selector, click it in the current frame, and respond with success or a Finnish error.
 
-### 4. Popup UI
+Do not enforce URL matching inside `test-rule`; popup intent and frame targeting are sufficient. This avoids false failures in embedded PowerApps frames whose frame URL differs from the browser tab URL.
 
-**As a user**, I want a simple settings panel where I can turn monitoring on/off and adjust the interval, so there's no unnecessary complexity.
+### Monitoring startup
 
-#### Layout
+On initialization and whenever `settings` or `rule` changes:
 
-The popup is a compact single-column panel with two sections:
+- Normalize stored state.
+- Increment a monitoring session counter so old loops cancel at their next checkpoint.
+- Start monitoring in a frame only when:
+  - `settings.enabled` is true.
+  - `rule` is valid.
+  - The top-level tab URL matches `rule.urlPattern`. Ask the background service worker with `{ type: "should-monitor-tab", settings, rule }`; fall back to the frame URL check only if messaging fails.
+  - The current frame contains the configured selector.
 
-1. **Settings section** — toggles and interval inputs.
-2. **Setup section** — active tab origin, button selector, and picker/test actions.
-3. **Autosave notice** — informs the user that changes are saved automatically.
+This frame-aware behavior is required for PowerApps pages where the browser address bar is on `apps.powerapps.com` but the actual canvas content runs in a different frame.
 
-#### Settings section
+### Monitoring loop
 
-Controls (rendered as labelled toggle switches):
+For each monitoring session:
 
-- **Tarkkailu päällä** — maps to `enabled`. Master switch.
-- **Työpöytäilmoitus** — maps to `notifications`. Send desktop notification on change.
-- **Äänimerkki** — maps to `sound`. Play audio on change.
+1. Wait a random interval in `[minIntervalMs, maxIntervalMs]`.
+2. Take a snapshot.
+3. Click the configured selector.
+4. Wait 1500 ms for the page to settle.
+5. Take a second snapshot.
+6. If snapshots differ by `JSON.stringify`, send `buildChangeAlertMessage(settings)` to the background service worker.
+7. Continue until the session is cancelled.
 
-Interval inputs (two number fields labelled **Päivitysväli (s)**, side by side, values entered and displayed in **seconds**):
+### Snapshot logic
 
-- **Min** — minimum interval in seconds; stored internally as `minIntervalMs = value × 1000`. Minimum value: 2 s.
-- **Max** — maximum interval in seconds; stored internally as `maxIntervalMs = value × 1000`. Must be ≥ min.
+- If `rule.listSelector` matches an element and it contains `[role="listitem"]` children, snapshot each list item `innerText` as an ordered array.
+- Otherwise snapshot `document.body.innerText` as a single-element array.
+- `listSelector` is auto-detected when empty by resolving the button, walking ancestors, finding a descendant `[role="list"]` or `[role="grid"]` not inside the button, and building a selector for that container.
 
-#### Setup section
+### Element lookup
 
-Shown below the settings. Allows configuring the monitored page and button.
+- XPath selectors are detected with `looksLikeXPath`.
+- XPath lookup uses `document.evaluate(..., XPathResult.FIRST_ORDERED_NODE_TYPE, ...)`.
+- CSS lookup uses `querySelector` on `document`, then breadth-first traversal into open shadow roots.
 
-- **Seurattava sivu** — read-only display of the active tab's origin. Always reflects the current tab; saved as `urlPattern` whenever the selector is saved.
-- **Painikkeen valitsin** — text input; accepts CSS or XPath.
-  - **Valitse sivulta** button — activates the element picker (saves form state, sends `start-picker` to the tab, closes popup).
-  - **Testaa** button — sends a one-shot click of the current selector to the active tab's content script and shows the result (success or error) in the status area. Useful for verifying the selector before enabling monitoring.
+### Click activation
 
-Changes persist automatically: toggles and interval inputs save on change, and the selector saves on change. A bottom toast shows success or error messages in Finnish, uses a polite live region for assistive technology, and dismisses itself after a short delay.
+When a selector resolves:
 
----
+- Scroll the element into view with centered block and inline alignment.
+- Focus it with `preventScroll: true` when focus is available.
+- Dispatch one synthetic pointer/mouse activation sequence to the element:
+  - `pointerover`
+  - `mouseover`
+  - `pointerdown`
+  - `mousedown`
+  - `pointerup`
+  - `mouseup`
+  - `click`
+- Do not also call `element.click()`. PowerApps can treat duplicate activation as an unintended navigation.
 
-### 5. Element picker
+### SPA support
 
-**As a user**, I want to click on the refresh button in the page to auto-detect its selector, so I don't have to write CSS or XPath by hand.
+Reinitialize when:
 
-#### Acceptance criteria
+- `hashchange` fires.
+- `popstate` fires.
+- Patched `history.pushState` changes the URL.
+- Patched `history.replaceState` changes the URL.
+- `visibilitychange` makes the document visible.
 
-- Activating the picker closes the popup and saves form state as a draft.
-- The content script overlays the page: a highlight follows the pointer over button-like elements; a fixed hint banner reads `"Vuoropäivittäjä: klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi"`.
-- Only button-like elements are selectable: `button`, `input[type="button"]`, `input[type="submit"]`, `input[type="reset"]`, `[role="button"]`.
-- On click: builds a selector, sends it to the background service worker, which saves `{ selector, url, frameId, tabId, timestamp }` under `lastPickedElement`; then the picker exits.
-- `Escape` cancels without saving.
-- After a picker round trip, **Testaa** targets the same frame that produced the selector. If the selector is edited manually, that frame hint is cleared.
+## Element picker
 
-#### Selector building priority
+The picker lets the user click the refresh button instead of writing a selector.
 
-1. Unique CSS candidate: `#id`, `tag[attr]`, `tag.class`, or DOM path — first that matches exactly one element.
-2. Indexed XPath `(<xpath>)[n]` if the element has duplicate matches on a preferred attribute or stable class.
-3. XPath fallback: attribute/class XPath, or absolute path.
+### Interaction
 
-**Preferred attributes**: `data-testid`, `data-test`, `data-automation-id`, `aria-label`, `name`, `title`, `type`, `role`.
+- Starting the picker removes any existing picker first.
+- Add a fixed highlight overlay that follows selectable button-like elements.
+- Add a fixed hint banner with Finnish text instructing the user to click a button or press Esc.
+- Selectable elements are:
+  - `button`
+  - `input[type="button"]`
+  - `input[type="submit"]`
+  - `input[type="reset"]`
+  - `[role="button"]`
+- On `pointerdown` over a selectable element, stop propagation but do not call `preventDefault`; Chrome may suppress the later `click`.
+- On `click`, prevent default, stop propagation, build a selector, send `{ type: "element-picked", selector }` to the background, and stop the picker.
+- On `Escape`, cancel and stop the picker without saving.
 
-**Stable identifiers**: no whitespace, no 3+ consecutive digits, not matching `/^f[a-z0-9]+$/i`, not starting with `__`, not containing `buttoncanvas`.
+### Selector priority
 
-#### State restoration after pick
+Build selectors in this order:
 
-When the popup reopens: load draft → fill selector from `lastPickedElement` → clear both storage keys → show confirmation status.
+1. Unique CSS candidate:
+   - `#id` when stable.
+   - `tag[attr="value"]` for preferred attributes.
+   - `tag.class` using stable classes.
+   - Ancestor-qualified direct selectors.
+   - DOM path with `:nth-of-type` where needed.
+2. Indexed XPath `(<xpath>)[n]` using preferred attributes or a stable class when duplicates exist.
+3. XPath fallback using attributes/classes or an absolute path.
 
----
+Preferred attributes:
 
-## Non-functional requirements
+- `data-testid`
+- `data-test`
+- `data-automation-id`
+- `data-control-name`
+- `aria-label`
+- `name`
+- `title`
+- `type`
+- `role`
 
-- **No build step** — plain ES2020+ scripts; `shared.js` exports to `globalThis.VuoropaivittajaShared` and `module.exports` for Node.js tests.
-- **Tests** — shared utility functions covered by `node --test` unit tests.
-- **Interval inputs in seconds** — the popup displays and accepts seconds; the extension stores and uses milliseconds internally (`ms = s × 1000`).
-- **Interval randomisation** — each tick picks a fresh delay with `Math.floor(Math.random() * (max - min + 1)) + min` ms.
-- **URL pattern derivation** — `urlPattern` is always derived from the active tab's origin (scheme + host + port) at save time. The user never types a URL manually.
-- **Change detection** — when `listSelector` matches, snapshots each `[role="listitem"]` child's `innerText` as an array; falls back to `document.body.innerText` as a single-element array. Compared as JSON strings. Designed so individual slot entries can be stored as structured history in a future slice.
-- **Shadow DOM** — CSS selector search traverses shadow roots BFS; XPath does not.
-- **SPA support** — patches `history.pushState`/`replaceState`, listens to `hashchange` and `popstate`.
-- **Idempotent loading** — `__vuoropaivittajaLoaded` guard prevents double-init.
-- **Draft persistence** — form state survives the picker round-trip via `draftRule` in storage.
-- **Audio** — the alert sound is generated with the Web Audio API (oscillator + gain envelope), no bundled audio file needed.
+Stable class and identifier filtering must use `isStableIdentifier` rules plus class-name shape validation.
+
+## Background service worker behavior
+
+### Messages
+
+- `{ type: "change-detected", notifications, sound }`
+  - If `notifications` is true, create a Chrome desktop notification with title `Vuoropäivittäjä` and message `Uusia vuoroja saattaa olla saatavilla.`
+  - If `sound` is true, play alert sound through the offscreen document.
+  - Notification and sound attempts must be independent; one failure must not block the other.
+- `{ type: "element-picked", selector }`
+  - Store `lastPickedElement` with selector, `sender.url`, `sender.frameId`, `sender.tab.id`, and timestamp.
+- `{ type: "should-monitor-tab", settings, rule }`
+  - Respond with `{ ok: true, shouldMonitor }` using the sender's top-level `tab.url`.
+
+### Popup restoration after picker
+
+When `lastPickedElement` is written, call `chrome.action.openPopup()` if available. Failure must be ignored so older Chrome versions degrade to manual toolbar click.
+
+### Disable on tab close
+
+On any tab removal:
+
+- Read normalized `settings` and `rule`.
+- If monitoring is disabled or no rule is active, do nothing.
+- Query all open tabs.
+- If no open tab URL matches `rule.urlPattern`, set `settings.enabled` to `false` while preserving other settings.
+
+## Offscreen audio behavior
+
+The background worker cannot rely on page content for product audio. Use an extension offscreen document.
+
+- Manifest must include the `offscreen` permission.
+- `background.js` creates `offscreen.html` with reason `AUDIO_PLAYBACK` before playing sound.
+- Reuse an existing offscreen document when one exists.
+- Avoid concurrent duplicate creation with an in-flight creation promise.
+- `offscreen.js` listens for `{ type: "play-alert-sound" }`.
+- Sound is generated with Web Audio API oscillator and gain envelope.
+- Use a short beep: start around 880 Hz, shift to 660 Hz after 0.15 s, fade out by about 0.45 s.
+- No audio file dependency.
+
+## Failure handling
+
+- All popup-visible errors must be Finnish.
+- Autosave failures may be silent unless they affect an explicit user action.
+- Picker startup and test failures must show a toast.
+- Alert creation failures should not show UI because they happen during background monitoring; they must not block the other alert channel.
+- Content scripts must tolerate inaccessible pages and frames.
+- A stale picked `frameId` must not be reused after manual selector edits.
+
+## Test page
+
+Include a local test page that simulates a PowerApps-like DOM:
+
+- Refresh control: `[role="button"][data-control-name="refresh_button"]`
+- Slot list: `[role="list"][data-testid="vuoro-lista"]`
+- Slot entries: `[role="listitem"]`
+- Clicking refresh cycles through at least three states so snapshot changes are observable.
+
+Provide a `pnpm serve` script that serves the test page on port 3000.
+
+## Verification
+
+Automated checks:
+
+- `pnpm test`
+- `pnpm check`
+- `pnpm lint` when lint-only verification is desired.
+
+Unit tests should cover at minimum:
+
+- Settings normalization defaults and interval clamping.
+- Rule normalization and invalid rule rejection.
+- Case-insensitive URL matching.
+- Top-level tab monitoring decision.
+- Alert message construction preserving independent notification and sound toggles.
+- XPath detection.
+- Stable identifier rejection for dynamic PowerApps-like IDs.
+
+Manual verification:
+
+- Load the unpacked extension in Chrome after manifest permission changes.
+- Open the local test page and confirm picker, test click, monitoring, desktop notification, and sound.
+- On a PowerApps booking page, pick the refresh button, confirm `Testaa` clicks the same frame/button, and confirm no unexpected `/open/...` tab is created by repeated tests.
+- Confirm closing the last monitored tab turns `Tarkkailu päällä` off.
+
+## Commit and tooling rules
+
+- Use `pnpm` scripts: `pnpm test`, `pnpm lint`, `pnpm check`, `pnpm format`.
+- Commit only when explicitly requested.
+- Commit messages use Conventional Commits: `feat`, `fix`, `refactor`, `docs`, or `chore`.
+- Keep commit subjects under 72 characters.
