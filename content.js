@@ -10,6 +10,8 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     looksLikeXPath,
     isStableIdentifier,
   } = globalThis.VuoropaivittajaShared;
+  const { shouldStartMonitoring, snapshotsAreEqual } =
+    globalThis.VuoropaivittajaContentHelpers;
 
   let lastUrl = location.href;
   let pickerState = null;
@@ -89,9 +91,12 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       const session = monitoringSession;
 
       if (
-        (await shouldMonitorCurrentTab(settings, rule)) &&
-        rule &&
-        findElementInPage(rule.selector)
+        shouldStartMonitoring(
+          settings,
+          rule,
+          await shouldMonitorCurrentTab(settings, rule),
+          rule && findElementInPage(rule.selector)
+        )
       ) {
         void ensureListSelector(rule);
         void startMonitoring(settings, rule, session);
@@ -156,7 +161,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (monitoringSession !== session) break;
 
       const after = takeSnapshot(rule.listSelector);
-      if (JSON.stringify(after) !== JSON.stringify(before)) {
+      if (!snapshotsAreEqual(before, after)) {
         logger.info("Snapshot change detected", {
           event: "change-detected",
           session,

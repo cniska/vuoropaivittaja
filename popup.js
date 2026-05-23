@@ -269,7 +269,7 @@ async function sendToActiveTab(message, options = {}) {
     if (!error?.message?.includes("Receiving end does not exist")) throw error;
     await chrome.scripting.executeScript({
       target: { tabId: activeTab.id, allFrames: true },
-      files: ["shared.js", "content.js"],
+      files: ["shared.js", "content-helpers.js", "content.js"],
     });
     return chrome.tabs.sendMessage(activeTab.id, message, sendOptions);
   }

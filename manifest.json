@@ -28,6 +28,7 @@
       "all_frames": true,
       "js": [
         "shared.js",
+        "content-helpers.js",
         "content.js"
       ],
       "run_at": "document_idle"

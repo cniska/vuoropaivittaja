@@ -38,6 +38,7 @@ Required files:
 - `manifest.json`
 - `background.js`
 - `content.js`
+- `content-helpers.js`
 - `popup.html`
 - `popup.css`
 - `popup.js`
@@ -59,7 +60,7 @@ The manifest must include:
 - Default title: `Vuoropäivittäjä`
 - Default icon: `icon.png`
 - Background service worker: `background.js`
-- Content scripts: `shared.js` and `content.js`
+- Content scripts: `shared.js`, `content-helpers.js`, and `content.js`
 - Content script matches: `<all_urls>`
 - Content script options: `all_frames: true`, `run_at: "document_idle"`
 - Permissions: `notifications`, `offscreen`, `scripting`, `storage`, `tabs`
@@ -181,7 +182,7 @@ The popup is a compact settings panel with two sections and an autosave notice.
 
 - If no active tab is available, show `Avaa kohdesivusto ensin.`
 - Otherwise save `draftRule`, send `{ type: "start-picker" }` to the active tab, and close the popup.
-- If the content script is not present, inject `content.js` into all frames and retry.
+- If the content script is not present, inject `content-helpers.js` and `content.js` into all frames and retry.
 - On failure, show `Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä uudelleen.`
 
 ### Test button
@@ -191,12 +192,12 @@ The popup is a compact settings panel with two sections and an autosave notice.
 - Otherwise send `{ type: "test-rule", rule: { urlPattern, selector } }` to the active tab.
 - If a picked frame hint exists, send the message to that `frameId`.
 - Show the response message on success or the response error on failure.
-- If no content script responds, inject `shared.js` and `content.js` into all frames and retry.
+- If no content script responds, inject `shared.js`, `content-helpers.js`, and `content.js` into all frames and retry.
 - If the page still cannot be reached, show `Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.`
 
 ### Debug logging
 
-- When `settings.debugLogging` is true, the extension emits grouped console logs for user-visible actions and invisible operational steps from the popup, content script, and background service worker.
+- When `settings.debugLogging` is true, the extension emits badge-styled console logs for user-visible actions and invisible operational steps from the popup, content script, and background service worker.
 - Each log entry should start with a blue `Vuoropäivittäjä` badge, followed by a short English headline and a compact inline metadata trail.
 - Use `console.info` for ordinary action logs, `console.warn` for recoverable problems, and `console.error` for failures.
 - Popup logs are visible in the popup DevTools console.
