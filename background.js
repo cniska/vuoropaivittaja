@@ -3,6 +3,17 @@ importScripts("shared.js");
 const { normalizeSettings, normalizeRule, urlMatches } =
   self.VuoropaivittajaShared;
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === "change-detected") {
+    void chrome.notifications.create("vuoro-change", {
+      type: "basic",
+      iconUrl: "icon.png",
+      title: "Vuoropäivittäjä",
+      message: "Uusia vuoroja saattaa olla saatavilla.",
+    });
+  }
+});
+
 chrome.runtime.onStartup.addListener(() => {
   void ensureTabOpen();
 });

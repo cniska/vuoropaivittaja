@@ -5,10 +5,14 @@
   "description": "Tarkkailee varattavia vuoroja ja ilmoittaa uusista ajoista.",
   "minimum_chrome_version": "120",
   "permissions": [
+    "notifications",
     "scripting",
     "storage",
     "tabs"
   ],
+  "icons": {
+    "128": "icon.png"
+  },
   "host_permissions": [
     "<all_urls>"
   ],

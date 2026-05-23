@@ -91,7 +91,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
       const after = takeSnapshot(rule.listSelector);
       if (JSON.stringify(after) !== JSON.stringify(before)) {
-        fireChangeNotification();
+        fireChangeNotification(settings);
       }
     }
   }
@@ -113,8 +113,39 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function fireChangeNotification() {
-    chrome.runtime.sendMessage({ type: "change-detected" });
+  function fireChangeNotification(settings) {
+    if (settings.sound) {
+      playBeep();
+    }
+    if (settings.notifications) {
+      chrome.runtime.sendMessage({ type: "change-detected" });
+    }
+  }
+
+  function playBeep() {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + 0.13);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.45);
+      osc.onended = () => ctx.close();
+    } catch {
+      // audio not available in this context
+    }
   }
 
   function patchHistoryMethod(methodName) {
