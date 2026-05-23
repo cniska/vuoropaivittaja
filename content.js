@@ -80,12 +80,14 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       const settings = normalizeSettings(stored.settings);
       const rule = normalizeRule(stored.rule);
       debugLoggingEnabled = Boolean(settings.debugLogging);
-      logger.info("Content script initialized", {
-        event: "initialize",
-        enabled: settings.enabled,
-        debugLogging: debugLoggingEnabled,
-        hasRule: Boolean(rule),
-      });
+      if (isTopFrame()) {
+        logger.info("Content script initialized", {
+          event: "initialize",
+          enabled: settings.enabled,
+          debugLogging: debugLoggingEnabled,
+          hasRule: Boolean(rule),
+        });
+      }
 
       monitoringSession += 1;
       const session = monitoringSession;
@@ -112,10 +114,12 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         });
       }
     } catch (error) {
-      logger.warn("Content script initialization failed", {
-        event: "initialize-failed",
-        message: String(error?.message || error || ""),
-      });
+      if (isTopFrame()) {
+        logger.warn("Content script initialization failed", {
+          event: "initialize-failed",
+          message: String(error?.message || error || ""),
+        });
+      }
     }
   }
 

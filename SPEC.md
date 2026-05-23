@@ -200,6 +200,7 @@ The popup is a compact settings panel with two sections and an autosave notice.
 - When `settings.debugLogging` is true, the extension emits badge-styled console logs for user-visible actions and invisible operational steps from the popup, content script, and background service worker.
 - Each log entry should start with a blue `Vuoropäivittäjä` badge, followed by a short English headline and a compact inline metadata trail.
 - Use `console.info` for ordinary action logs, `console.warn` for recoverable problems, and `console.error` for failures.
+- Content-script startup and picker lifecycle logs are emitted from the top frame only; frame-local monitoring logs remain frame-local.
 - Popup logs are visible in the popup DevTools console.
 - Content-script logs are visible in the monitored page console.
 - Background logs are visible in the service worker console from `chrome://extensions`.
