@@ -171,6 +171,7 @@ The popup is a compact settings panel with two sections and an autosave notice.
 - Successful autosaves show `Tallennettu.` in the toast.
 - Manually editing selector clears any stored picked `frameId` hint.
 - Loading `lastPickedElement` must fill the selector, remember `frameId` only when `tabId` matches the active tab, autosave the rule, clear the temporary key, and show `Painike valittu sivulta.`
+- When the monitoring loop clicks the refresh button and the popup is open, reuse the same toast area to show `Päivitä-painiketta klikattiin.` or the click failure message.
 
 ### Picker button
 

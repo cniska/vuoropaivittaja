@@ -32,6 +32,14 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       return false;
     }
 
+    if (message?.type === "stop-picker") {
+      stopPicker();
+      sendResponse({
+        ok: true,
+      });
+      return false;
+    }
+
     if (message?.type === "test-rule") {
       const selector = String(message.rule?.selector || "").trim();
       if (!selector) {
@@ -103,7 +111,16 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (monitoringSession !== session) break;
 
       const before = takeSnapshot(rule.listSelector);
-      clickSelectorInPage(rule.selector);
+      const clickResult = clickSelectorInPage(rule.selector);
+      void chrome.runtime
+        .sendMessage({
+          type: "monitor-clicked",
+          ok: clickResult.clicked,
+          message: clickResult.clicked
+            ? "Päivitä-painiketta klikattiin."
+            : clickResult.message,
+        })
+        .catch(() => {});
 
       await delay(1500);
       if (monitoringSession !== session) break;
@@ -240,7 +257,10 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     hint.style.boxShadow = "0 10px 24px rgba(0, 0, 0, 0.24)";
 
     document.documentElement.appendChild(overlay);
-    document.documentElement.appendChild(hint);
+    const shouldShowHint = window.top === window;
+    if (shouldShowHint) {
+      document.documentElement.appendChild(hint);
+    }
 
     const handlePointerMove = (event) => {
       const target = getSelectableElement(event);
@@ -258,14 +278,20 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       event.stopImmediatePropagation();
 
       const selector = buildSelectorForElement(target);
-      await chrome.runtime.sendMessage({ type: "element-picked", selector });
       stopPicker();
+      void chrome.runtime.sendMessage({ type: "stop-picker" }).catch(() => {});
+      void chrome.runtime
+        .sendMessage({ type: "element-picked", selector })
+        .catch(() => {});
     };
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
         stopPicker();
+        void chrome.runtime
+          .sendMessage({ type: "stop-picker" })
+          .catch(() => {});
       }
     };
 

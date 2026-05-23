@@ -24,6 +24,15 @@ let statusTimer = null;
 
 void initialize();
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === "monitor-clicked") {
+    setStatus(
+      String(message.message || "Päivitä-painiketta klikattiin."),
+      !message.ok
+    );
+  }
+});
+
 async function initialize() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   activeTab = tab ?? null;

@@ -30,6 +30,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (message?.type === "stop-picker") {
+    if (sender.tab?.id) {
+      void chrome.tabs
+        .sendMessage(sender.tab.id, { type: "stop-picker" })
+        .catch(() => {});
+    }
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message?.type === "should-monitor-tab") {
     const settings = normalizeSettings(message.settings);
     const rule = normalizeRule(message.rule);
