@@ -73,26 +73,34 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   patchHistoryMethod("replaceState");
 
   async function initialize() {
-    const stored = await chrome.storage.local.get({ settings: {}, rule: {} });
-    const settings = normalizeSettings(stored.settings);
-    const rule = normalizeRule(stored.rule);
-    debugLoggingEnabled = Boolean(settings.debugLogging);
-    logger.info("Sisältösarja alustettiin.", {
-      event: "initialize",
-      enabled: settings.enabled,
-      debugLogging: debugLoggingEnabled,
-      hasRule: Boolean(rule),
-    });
+    try {
+      const stored = await chrome.storage.local.get({ settings: {}, rule: {} });
+      const settings = normalizeSettings(stored.settings);
+      const rule = normalizeRule(stored.rule);
+      debugLoggingEnabled = Boolean(settings.debugLogging);
+      logger.info("Content script initialized", {
+        event: "initialize",
+        enabled: settings.enabled,
+        debugLogging: debugLoggingEnabled,
+        hasRule: Boolean(rule),
+      });
 
-    monitoringSession += 1;
-    const session = monitoringSession;
+      monitoringSession += 1;
+      const session = monitoringSession;
 
-    if (
-      (await shouldMonitorCurrentTab(settings, rule)) &&
-      findElementInPage(rule.selector)
-    ) {
-      void ensureListSelector(rule);
-      void startMonitoring(settings, rule, session);
+      if (
+        (await shouldMonitorCurrentTab(settings, rule)) &&
+        rule &&
+        findElementInPage(rule.selector)
+      ) {
+        void ensureListSelector(rule);
+        void startMonitoring(settings, rule, session);
+      }
+    } catch (error) {
+      logger.warn("Content script initialization failed", {
+        event: "initialize-failed",
+        message: String(error?.message || error || ""),
+      });
     }
   }
 
@@ -114,7 +122,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   }
 
   async function startMonitoring(settings, rule, session) {
-    logger.info("Tarkkailusilmukka käynnistyi.", {
+    logger.info("Monitoring loop started", {
       event: "monitoring-started",
       session,
       selector: rule.selector,
@@ -128,7 +136,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
       const before = takeSnapshot(rule.listSelector);
       const clickResult = clickSelectorInPage(rule.selector);
-      logger.info("Päivitä-painike käsiteltiin.", {
+      logger.info("Refresh button processed", {
         event: "monitor-click",
         clicked: clickResult.clicked,
         message: clickResult.message,
@@ -149,7 +157,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
       const after = takeSnapshot(rule.listSelector);
       if (JSON.stringify(after) !== JSON.stringify(before)) {
-        logger.info("Muutos havaittiin snapshotissa.", {
+        logger.info("Snapshot change detected", {
           event: "change-detected",
           session,
           notifications: settings.notifications,
@@ -220,7 +228,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   }
 
   function fireChangeNotification(settings) {
-    logger.info("Ilmoitus lähetettiin taustalle.", {
+    logger.info("Alert sent to background", {
       event: "alert-dispatched",
       notifications: settings.notifications,
       sound: settings.sound,
@@ -258,7 +266,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
   function startPicker() {
     stopPicker();
-    logger.info("Valitsin käynnistyi sivulla.", { event: "picker-started" });
+    logger.info("Picker started on page", { event: "picker-started" });
 
     const overlay = document.createElement("div");
     overlay.dataset.autoClickerOverlay = "true";
@@ -363,7 +371,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
     pickerState.cleanup();
     pickerState = null;
-    logger.info("Valitsin suljettiin sivulla.", { event: "picker-stopped" });
+    logger.info("Picker closed on page", { event: "picker-closed" });
   }
 
   function getSelectableElement(event) {

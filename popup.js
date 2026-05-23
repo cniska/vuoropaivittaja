@@ -29,7 +29,7 @@ void initialize();
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "monitor-clicked") {
-    logger.info("Päivitä-painike klikattiin.", {
+    logger.info("Refresh button clicked", {
       event: "monitor-clicked",
       ok: Boolean(message.ok),
       message: String(message.message || ""),
@@ -38,16 +38,6 @@ chrome.runtime.onMessage.addListener((message) => {
       String(message.message || "Päivitä-painiketta klikattiin."),
       !message.ok
     );
-    return;
-  }
-
-  if (message?.type === "notification-result") {
-    logger.info("Ilmoitus käsiteltiin.", {
-      event: "notification-result",
-      ok: Boolean(message.ok),
-      message: String(message.message || ""),
-    });
-    setStatus(String(message.message || "Ilmoitus käsitelty."), !message.ok);
   }
 });
 
@@ -103,13 +93,13 @@ async function autosaveSettings() {
     await chrome.storage.local.set({
       [SETTINGS_KEY]: nextSettings,
     });
-    logger.info("Asetukset tallennettiin.", {
+    logger.info("Settings saved", {
       event: "autosave-settings",
       ...nextSettings,
     });
     setStatus("Tallennettu.");
   } catch (error) {
-    logger.error("Asetusten tallennus epäonnistui.", {
+    logger.error("Settings save failed", {
       event: "autosave-settings-failed",
       message: String(error?.message || error || ""),
     });
@@ -131,12 +121,12 @@ async function autosaveRule(showToast = true) {
     if (showToast) {
       setStatus("Tallennettu.");
     }
-    logger.info("Valitsin tallennettiin.", {
+    logger.info("Selector saved", {
       event: "autosave-rule",
       ...nextRule,
     });
   } catch (error) {
-    logger.error("Valitsimen tallennus epäonnistui.", {
+    logger.error("Selector save failed", {
       event: "autosave-rule-failed",
       message: String(error?.message || error || ""),
     });
@@ -151,7 +141,7 @@ pickElementButton.addEventListener("click", async () => {
   }
 
   try {
-    logger.info("Valitsin käynnistettiin.", { event: "start-picker" });
+    logger.info("Picker started", { event: "start-picker" });
     await saveDraft();
     await sendToActiveTab({ type: "start-picker" });
     window.close();
@@ -177,7 +167,7 @@ testSelectorButton.addEventListener("click", async () => {
 
   try {
     setStatus("Testataan...");
-    logger.info("Valitsin testataan.", {
+    logger.info("Testing selector", {
       event: "test-selector",
       selector,
       frameId: pickedFrameId,

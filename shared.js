@@ -79,33 +79,24 @@
       return meta && typeof meta === "object" && Object.keys(meta).length > 0;
     }
 
+    function formatMeta(meta) {
+      return Object.entries(meta)
+        .map(([key, value]) => `${key}=${String(value)}`)
+        .join(" · ");
+    }
+
     function emit(level, message, meta = {}) {
       const text = String(message || "");
-      const title = `Vuoropäivittäjä · ${namespace} · ${text}`;
       const write = console[level] || console.info;
-      const grouped =
-        hasMeta(meta) && typeof console.groupCollapsed === "function";
-
-      if (grouped) {
-        console.groupCollapsed(title);
-        write.call(console, {
-          app: "Vuoropäivittäjä",
-          scope: namespace,
-          level,
-          message: text,
-          ...meta,
-        });
-        console.groupEnd();
-        return;
-      }
-
-      write.call(console, title, {
-        app: "Vuoropäivittäjä",
-        scope: namespace,
-        level,
-        message: text,
-        ...meta,
-      });
+      const badgeStyle =
+        "background:#2563eb;color:#fff;padding:1px 6px;border-radius:7px;font-weight:600;";
+      const metaText = hasMeta(meta) ? ` · ${formatMeta(meta)}` : "";
+      write.call(
+        console,
+        `%cVuoropäivittäjä%c ${namespace} · ${text}${metaText}`,
+        badgeStyle,
+        ""
+      );
     }
 
     return {

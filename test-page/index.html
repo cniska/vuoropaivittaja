@@ -16,48 +16,29 @@
 
       body {
         font-family: "Segoe UI", system-ui, sans-serif;
-        background: #f1f5f9;
+        background: #f8fafc;
         color: #1e293b;
         min-height: 100vh;
       }
 
       .control-panel {
-        background: #1e293b;
-        color: #f8fafc;
-        padding: 12px 20px;
+        background: #ffffff;
+        color: #1e293b;
+        padding: 10px 16px;
         display: flex;
         align-items: center;
         gap: 10px;
         flex-wrap: wrap;
-        font-size: 13px;
+        font-size: 12px;
+        border-bottom: 1px solid #e2e8f0;
       }
 
       .control-panel strong {
         margin-right: 6px;
-        color: #94a3b8;
+        color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-size: 11px;
-      }
-
-      .control-panel button {
-        background: #334155;
-        color: #f8fafc;
-        border: 1px solid #475569;
-        border-radius: 6px;
-        padding: 5px 12px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: background 0.15s;
-      }
-
-      .control-panel button:hover {
-        background: #475569;
-      }
-
-      .control-panel button.active {
-        background: #2563eb;
-        border-color: #2563eb;
       }
 
       #state-label {
@@ -67,32 +48,32 @@
       }
 
       .page {
-        max-width: 800px;
-        margin: 40px auto;
-        padding: 0 20px;
+        max-width: 760px;
+        margin: 24px auto;
+        padding: 0 16px 24px;
       }
 
       h1 {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 600;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
       }
 
       .subtitle {
         color: #64748b;
-        font-size: 14px;
-        margin-bottom: 28px;
+        font-size: 13px;
+        margin-bottom: 20px;
       }
 
       .app-wrapper {
         background: #ffffff;
-        border-radius: 12px;
+        border-radius: 8px;
         border: 1px solid #e2e8f0;
         overflow: hidden;
       }
 
       .app-header {
-        padding: 20px 24px;
+        padding: 16px 20px;
         border-bottom: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
@@ -100,7 +81,7 @@
       }
 
       .app-title {
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 600;
       }
 
@@ -110,9 +91,9 @@
         gap: 6px;
         background: #2563eb;
         color: #fff;
-        border-radius: 8px;
-        padding: 8px 16px;
-        font-size: 14px;
+        border-radius: 6px;
+        padding: 7px 14px;
+        font-size: 13px;
         font-weight: 500;
         cursor: pointer;
         user-select: none;
@@ -140,18 +121,18 @@
       }
 
       .slot-list {
-        padding: 16px 24px;
+        padding: 14px 20px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
         min-height: 120px;
       }
 
       .slot-item {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 14px 18px;
+        border-radius: 6px;
+        padding: 12px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -171,12 +152,7 @@
 
       .slot-time {
         font-weight: 500;
-        font-size: 14px;
-      }
-
-      .slot-location {
         font-size: 13px;
-        color: #64748b;
       }
 
       .slot-badge {
@@ -192,14 +168,14 @@
 
       .empty-state {
         color: #94a3b8;
-        font-size: 14px;
+        font-size: 13px;
         text-align: center;
-        padding: 32px;
+        padding: 28px;
       }
 
       .click-log {
         border-top: 1px solid #e2e8f0;
-        padding: 12px 24px;
+        padding: 10px 20px;
         font-size: 12px;
         color: #94a3b8;
         min-height: 40px;
@@ -209,9 +185,6 @@
   <body>
     <div class="control-panel">
       <strong>Testipaneeli</strong>
-      <button id="btn-state-0" onclick="setSlotState(0)">Tila 1 — 3 vuoroa</button>
-      <button id="btn-state-1" onclick="setSlotState(1)">Tila 2 — 5 vuoroa (uusia!)</button>
-      <button id="btn-state-2" onclick="setSlotState(2)">Tila 3 — 2 vuoroa</button>
       <span id="state-label"></span>
     </div>
 
@@ -246,31 +219,28 @@
     </div>
 
     <script>
-      const STATES = [
-        [
-          { time: "Ma 26.5. 08:00–16:00", location: "Helsinki", isNew: false },
-          { time: "Ti 27.5. 12:00–20:00", location: "Espoo", isNew: false },
-          { time: "Ke 28.5. 06:00–14:00", location: "Vantaa", isNew: false },
-        ],
-        [
-          { time: "Ma 26.5. 08:00–16:00", location: "Helsinki", isNew: false },
-          { time: "Ti 27.5. 12:00–20:00", location: "Espoo", isNew: false },
-          { time: "Ke 28.5. 06:00–14:00", location: "Vantaa", isNew: false },
-          { time: "To 29.5. 10:00–18:00", location: "Helsinki", isNew: true },
-          { time: "Pe 30.5. 14:00–22:00", location: "Espoo", isNew: true },
-        ],
-        [
-          { time: "Ti 27.5. 12:00–20:00", location: "Espoo", isNew: false },
-          { time: "Pe 30.5. 14:00–22:00", location: "Espoo", isNew: false },
-        ],
+      const INITIAL_SLOTS = [
+        { time: "Ke 28.5. 06:00–14:00", isNew: false },
+        { time: "Ti 27.5. 12:00–20:00", isNew: false },
+        { time: "Ma 26.5. 08:00–16:00", isNew: false },
       ];
 
-      let currentState = 0;
+      const UPCOMING_SLOTS = [
+        { time: "La 31.5. 09:00–15:00" },
+        { time: "Pe 30.5. 14:00–22:00" },
+        { time: "To 29.5. 10:00–18:00" },
+      ];
+
+      const ARRIVAL_PATTERN = [true, false, true, false, true, false];
+
+      const visibleSlots = INITIAL_SLOTS.map((slot) => ({ ...slot }));
+      const pendingSlots = [];
+      let arrivalIndex = 0;
       let clickCount = 0;
 
-      function renderSlots(state) {
+      function renderSlots() {
         const list = document.querySelector('[role="list"]');
-        const slots = STATES[state];
+        const slots = visibleSlots;
 
         if (slots.length === 0) {
           list.innerHTML = '<div class="empty-state">Ei saatavilla olevia vuoroja.</div>';
@@ -280,34 +250,66 @@
               (slot) => `
             <div role="listitem" class="slot-item">
               <span class="slot-time">${slot.time}${slot.isNew ? '<span class="slot-badge">Uusi</span>' : ""}</span>
-              <span class="slot-location">${slot.location}</span>
             </div>
           `
             )
             .join("");
         }
 
-        document.getElementById("state-label").textContent =
-          `Tila ${state + 1} — ${slots.length} vuoroa`;
-
-        for (let i = 0; i < 3; i++) {
-          const btn = document.getElementById(`btn-state-${i}`);
-          btn.classList.toggle("active", i === state);
-        }
+        updateStatus();
       }
 
-      function setSlotState(state) {
-        currentState = state;
-        renderSlots(state);
+      function updateStatus(extraMessage = "") {
+        document.getElementById("state-label").textContent =
+          pendingSlots.length > 0
+            ? `Uusia vuoroja odottaa: ${pendingSlots.length}`
+            : "Ei uusia vuoroja juuri nyt";
+        document.getElementById("click-log").textContent = extraMessage
+          ? `Klikkauksia: ${clickCount} — ${extraMessage}`
+          : `Klikkauksia: ${clickCount}`;
       }
 
       const refreshBtn = document.querySelector('[role="button"]');
 
+      function queueIncomingSlot() {
+        const shouldQueueSlot = ARRIVAL_PATTERN[arrivalIndex % ARRIVAL_PATTERN.length];
+        arrivalIndex += 1;
+
+        if (!shouldQueueSlot) {
+          updateStatus("ei uusia vuoroja juuri nyt");
+          return;
+        }
+
+        const nextSlot = UPCOMING_SLOTS.shift();
+        if (!nextSlot) {
+          clearInterval(arrivalTimer);
+          updateStatus("uusia vuoroja ei ole tulossa");
+          return;
+        }
+
+        pendingSlots.push({ ...nextSlot, isNew: true });
+        updateStatus("uusi vuoro odottaa päivitystä");
+      }
+
+      function flushPendingSlots() {
+        if (pendingSlots.length === 0) {
+          return false;
+        }
+
+        visibleSlots.unshift(...pendingSlots);
+        pendingSlots.length = 0;
+        return true;
+      }
+
       function handleRefreshClick() {
         clickCount += 1;
-        currentState = (currentState + 1) % STATES.length;
-        renderSlots(currentState);
-        document.getElementById("click-log").textContent = `Klikkauksia: ${clickCount} — tila vaihtui → ${currentState + 1}`;
+        const hadPendingSlots = flushPendingSlots();
+        renderSlots();
+        updateStatus(
+          hadPendingSlots
+            ? "uudet vuorot lisättiin listan alkuun"
+            : "ei uusia vuoroja vielä"
+        );
       }
 
       refreshBtn.addEventListener("click", handleRefreshClick);
@@ -319,7 +321,10 @@
         }
       });
 
-      renderSlots(0);
+      const arrivalTimer = window.setInterval(queueIncomingSlot, 12000);
+
+      renderSlots();
+      updateStatus();
     </script>
   </body>
 </html>

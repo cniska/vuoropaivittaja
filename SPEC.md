@@ -11,6 +11,7 @@ This document is the rebuild contract. A coding agent should be able to recreate
 - The extension supports one monitored site and one refresh button at a time.
 - The monitored site is always derived from the active browser tab origin. The user never enters a URL manually.
 - The extension detects page changes, not semantically verified new appointments. A changed slot list means "new slots may be available."
+- The monitored slot list is expected to be sorted by time in descending order, with newly added slots appearing first.
 - Monitoring can run while the tab is in the background.
 - Closing the last matching monitored tab disables monitoring automatically.
 - All user-facing text must be Finnish.
@@ -196,7 +197,7 @@ The popup is a compact settings panel with two sections and an autosave notice.
 ### Debug logging
 
 - When `settings.debugLogging` is true, the extension emits grouped console logs for user-visible actions and invisible operational steps from the popup, content script, and background service worker.
-- Each log entry should have a short Finnish headline and structured metadata inside the group.
+- Each log entry should start with a blue `Vuoropäivittäjä` badge, followed by a short English headline and a compact inline metadata trail.
 - Use `console.info` for ordinary action logs, `console.warn` for recoverable problems, and `console.error` for failures.
 - Popup logs are visible in the popup DevTools console.
 - Content-script logs are visible in the monitored page console.
@@ -255,6 +256,7 @@ For each monitoring session:
 - If `rule.listSelector` matches an element and it contains `[role="listitem"]` children, snapshot each list item `innerText` as an ordered array.
 - Otherwise snapshot `document.body.innerText` as a single-element array.
 - `listSelector` is auto-detected when empty by resolving the button, walking ancestors, finding a descendant `[role="list"]` or `[role="grid"]` not inside the button, and building a selector for that container.
+- The test page and the production page both rely on descending slot order so that newly added slots appear at the top of the list.
 
 ### Element lookup
 
@@ -389,7 +391,9 @@ Include a local test page that simulates a PowerApps-like DOM:
 - Refresh control: `[role="button"][data-control-name="refresh_button"]`
 - Slot list: `[role="list"][data-testid="vuoro-lista"]`
 - Slot entries: `[role="listitem"]`
-- Clicking refresh cycles through at least three states so snapshot changes are observable.
+- Slot entries on the test page show the slot time and an optional `Uusi` badge, without extra location text.
+- New slots are queued periodically; some ticks intentionally do nothing so refresh can also be tested against a no-change case.
+- New queued slots are inserted into the visible list only when refresh is clicked.
 
 Provide a `pnpm serve` script that serves the test page on port 3000.
 

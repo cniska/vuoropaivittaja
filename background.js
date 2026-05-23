@@ -17,7 +17,7 @@ const logger = createLogger("background", () => debugLoggingEnabled);
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "change-detected") {
     debugLoggingEnabled = Boolean(message.debugLogging);
-    logger.info("Muutos havaittiin.", {
+    logger.info("Change detected", {
       event: "change-detected",
       notifications: Boolean(message.notifications),
       sound: Boolean(message.sound),
@@ -32,7 +32,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "element-picked") {
-    logger.info("Painike valittiin sivulta.", {
+    logger.info("Element picked from page", {
       event: "element-picked",
       selector: String(message.selector || ""),
       tabId: sender.tab?.id ?? null,
@@ -51,8 +51,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "stop-picker") {
-    logger.info("Valitsin suljettiin.", {
-      event: "stop-picker",
+    logger.info("Picker closed", {
+      event: "picker-closed",
       tabId: sender.tab?.id ?? null,
       frameId: sender.frameId ?? null,
     });
@@ -70,7 +70,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const rule = normalizeRule(message.rule);
     const tabUrl = sender.tab?.url ?? "";
     debugLoggingEnabled = Boolean(settings.debugLogging);
-    logger.info("Tarkistetaan, pitäisikö välilehteä seurata.", {
+    logger.info("Checking whether the tab should be monitored", {
       event: "should-monitor-tab",
       shouldMonitor: shouldMonitorTab(settings, rule, tabUrl),
       tabUrl,
@@ -115,7 +115,7 @@ async function disableIfNoMatchingTab() {
       settings: { ...rawSettings, enabled: false },
     });
     logger.info(
-      "Tarkkailu poistettiin käytöstä, koska viimeinen välilehti suljettiin.",
+      "Monitoring was disabled because the last matching tab closed",
       {
         event: "disabled-on-tab-close",
         urlPattern: rule.urlPattern,
@@ -140,16 +140,11 @@ async function fireChangeAlert(message) {
 
 async function createNotification() {
   const permissionLevel = await chrome.notifications.getPermissionLevel();
-  logger.info("Tarkistetaan työpöytäilmoitusten oikeus.", {
+  logger.info("Checking desktop notification permission", {
     event: "notification-permission",
     permissionLevel,
   });
   if (permissionLevel !== "granted") {
-    await chrome.runtime.sendMessage({
-      type: "notification-result",
-      ok: false,
-      message: "Työpöytäilmoitukset on estetty Chromessa.",
-    });
     return;
   }
 
@@ -160,29 +155,19 @@ async function createNotification() {
       title: "Vuoropäivittäjä",
       message: "Uusia vuoroja saattaa olla saatavilla.",
     });
-    logger.info("Työpöytäilmoitus lähetettiin.", {
+    logger.info("Desktop notification sent", {
       event: "notification-created",
       notificationId: "generated",
     });
-    await chrome.runtime.sendMessage({
-      type: "notification-result",
-      ok: true,
-      message: "Työpöytäilmoitus lähetetty.",
-    });
   } catch {
-    logger.warn("Työpöytäilmoituksen luonti epäonnistui.", {
+    logger.warn("Desktop notification creation failed", {
       event: "notification-create-failed",
-    });
-    await chrome.runtime.sendMessage({
-      type: "notification-result",
-      ok: false,
-      message: "Työpöytäilmoitus ei onnistunut.",
     });
   }
 }
 
 async function playAlertSound() {
-  logger.info("Soitetaan ilmoitusääni.", {
+  logger.info("Playing alert sound", {
     event: "play-alert-sound",
   });
   await ensureOffscreenDocument();

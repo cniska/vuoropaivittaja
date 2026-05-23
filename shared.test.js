@@ -172,105 +172,59 @@ test("buildChangeAlertMessage preserves independent alert toggles", () => {
 test("createLogger emits structured payloads", () => {
   const calls = [];
   const originals = {
-    groupCollapsed: console.groupCollapsed,
-    groupEnd: console.groupEnd,
-    debug: console.debug,
     info: console.info,
     warn: console.warn,
     error: console.error,
   };
 
-  console.groupCollapsed = (...args) => calls.push(["groupCollapsed", args]);
-  console.groupEnd = (...args) => calls.push(["groupEnd", args]);
-  console.debug = (...args) => calls.push(["debug", args]);
   console.info = (...args) => calls.push(["info", args]);
   console.warn = (...args) => calls.push(["warn", args]);
   console.error = (...args) => calls.push(["error", args]);
 
   try {
     const logger = global.VuoropaivittajaShared.createLogger("popup", true);
-    logger.debug("Tallennus valmis.", { event: "save", status: "ok" });
-    logger.info("Valmis.", { event: "ready" });
-    logger.warn("Varoitus.", { event: "warning" });
-    logger.error("Virhe.", { event: "failure" });
+    logger.debug("Save complete", { event: "save", status: "ok" });
+    logger.info("Ready", { event: "ready" });
+    logger.warn("Warning", { event: "warning" });
+    logger.error("Failure", { event: "failure" });
   } finally {
-    console.groupCollapsed = originals.groupCollapsed;
-    console.groupEnd = originals.groupEnd;
-    console.debug = originals.debug;
     console.info = originals.info;
     console.warn = originals.warn;
     console.error = originals.error;
   }
 
   assert.deepEqual(calls[0], [
-    "groupCollapsed",
-    ["Vuoropäivittäjä · popup · Tallennus valmis."],
+    "info",
+    [
+      "%cVuoropäivittäjä%c popup · Save complete · event=save · status=ok",
+      "background:#2563eb;color:#fff;padding:1px 6px;border-radius:7px;font-weight:600;",
+      "",
+    ],
   ]);
   assert.deepEqual(calls[1], [
     "info",
     [
-      {
-        app: "Vuoropäivittäjä",
-        scope: "popup",
-        level: "info",
-        message: "Tallennus valmis.",
-        event: "save",
-        status: "ok",
-      },
+      "%cVuoropäivittäjä%c popup · Ready · event=ready",
+      "background:#2563eb;color:#fff;padding:1px 6px;border-radius:7px;font-weight:600;",
+      "",
     ],
   ]);
-  assert.deepEqual(calls[2], ["groupEnd", []]);
-  assert.deepEqual(calls[3], [
-    "groupCollapsed",
-    ["Vuoropäivittäjä · popup · Valmis."],
-  ]);
-  assert.deepEqual(calls[4], [
-    "info",
-    [
-      {
-        app: "Vuoropäivittäjä",
-        scope: "popup",
-        level: "info",
-        message: "Valmis.",
-        event: "ready",
-      },
-    ],
-  ]);
-  assert.deepEqual(calls[5], ["groupEnd", []]);
-  assert.deepEqual(calls[6], [
-    "groupCollapsed",
-    ["Vuoropäivittäjä · popup · Varoitus."],
-  ]);
-  assert.deepEqual(calls[7], [
+  assert.deepEqual(calls[2], [
     "warn",
     [
-      {
-        app: "Vuoropäivittäjä",
-        scope: "popup",
-        level: "warn",
-        message: "Varoitus.",
-        event: "warning",
-      },
+      "%cVuoropäivittäjä%c popup · Warning · event=warning",
+      "background:#2563eb;color:#fff;padding:1px 6px;border-radius:7px;font-weight:600;",
+      "",
     ],
   ]);
-  assert.deepEqual(calls[8], ["groupEnd", []]);
-  assert.deepEqual(calls[9], [
-    "groupCollapsed",
-    ["Vuoropäivittäjä · popup · Virhe."],
-  ]);
-  assert.deepEqual(calls[10], [
+  assert.deepEqual(calls[3], [
     "error",
     [
-      {
-        app: "Vuoropäivittäjä",
-        scope: "popup",
-        level: "error",
-        message: "Virhe.",
-        event: "failure",
-      },
+      "%cVuoropäivittäjä%c popup · Failure · event=failure",
+      "background:#2563eb;color:#fff;padding:1px 6px;border-radius:7px;font-weight:600;",
+      "",
     ],
   ]);
-  assert.deepEqual(calls[11], ["groupEnd", []]);
 });
 
 // urlMatches
