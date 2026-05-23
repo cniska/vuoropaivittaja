@@ -2,14 +2,16 @@
 
 ## Overview
 
-Vuoropäivittäjä is a Chrome extension that automatically clicks a configured button on a matching page at a set interval. Users define rules that pair a URL pattern with an element selector, and the extension clicks that element repeatedly on any tab whose URL matches. Enabled rules also keep their target page open: if the tab is closed, the extension reopens it automatically.
+Vuoropäivittäjä is a Chrome extension that monitors a booking or scheduling page for newly available slots. It clicks a configured refresh button at a random interval, compares the page content before and after each click, and notifies the user (desktop notification and/or sound) when the content changes — indicating that new slots may have appeared.
 
-The primary use case is repeatedly clicking a "refresh" or "check availability" button on a booking or scheduling page — for example, checking for newly available appointment slots without manual interaction.
+The extension is configured once for a single URL and button, then runs silently in the background. The popup is a simple settings panel, not a rule manager.
 
 ### Out of scope (future)
 
-- Detecting or listing newly available slots found on the page.
-- Sound or desktop notifications when new content appears.
+- Listing or storing found slots.
+- History of past notifications.
+- Multiple monitored sites simultaneously.
+- Sound or notification testing buttons.
 
 ---
 
@@ -24,179 +26,168 @@ The primary use case is repeatedly clicking a "refresh" or "check availability" 
 
 ## Data Model
 
-A **rule** is the core entity. All rules are stored as a JSON array in `chrome.storage.local` under the key `rules`.
+All persistent state lives in `chrome.storage.local`.
 
-| Field | Type | Required | Default | Constraints |
-|---|---|---|---|---|
-| `id` | string (UUID) | Yes | auto-generated | Must be non-empty to persist |
-| `name` | string | No | `""` | Display label only |
-| `urlPattern` | string | Yes | — | Non-empty; case-insensitive substring matched against tab URLs |
-| `selector` | string | Yes | — | Non-empty CSS selector or XPath expression |
-| `targetUrl` | string | No | `""` | Full URL to open if no matching tab exists |
-| `intervalMs` | number | Yes | `10000` | Minimum `500`; legacy `intervalMinutes` field is migrated on read |
-| `activateTab` | boolean | Yes | `false` | Whether to bring the tab to the front before each click |
-| `enabled` | boolean | Yes | `true` | Disabled rules are stored but do not click or reopen tabs |
+### Settings object — key `"settings"`
 
-A rule with an empty `urlPattern` or empty `selector` is considered invalid and is silently dropped on read.
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | boolean | `false` | Master on/off switch for monitoring |
+| `notifications` | boolean | `true` | Send a desktop notification when a change is detected |
+| `sound` | boolean | `true` | Play an audible alert when a change is detected |
+| `minIntervalMs` | number | `30000` | Minimum ms between refresh clicks (min `2000`) |
+| `maxIntervalMs` | number | `90000` | Maximum ms between refresh clicks (must be ≥ `minIntervalMs`) |
+
+### Rule object — key `"rule"`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `urlPattern` | string | `""` | Case-insensitive substring matched against the tab URL |
+| `selector` | string | `""` | CSS selector or XPath expression for the button to click |
+| `targetUrl` | string | `""` | Full URL to reopen if the tab is closed |
+
+A rule with an empty `urlPattern` or empty `selector` is not active.
 
 ### Temporary storage keys
 
 | Key | Purpose | Lifetime |
 |---|---|---|
-| `lastPickedElement` | Result written by the element picker in the page | Consumed once when the popup opens |
+| `lastPickedElement` | Selector written by the element picker | Consumed once when the popup opens |
 | `draftRule` | Form state saved before the picker closes the popup | Consumed once when the popup reopens |
 
 ---
 
 ## Features
 
-### 1. Auto-clicking
+### 1. Background monitoring
 
-**As a user**, I want the extension to click a button on a matching page automatically at a set interval, so I don't have to keep the page focused or manually refresh it.
+**As a user**, I want the extension to repeatedly refresh a page and alert me when new slots appear, so I can book immediately without watching the screen.
 
 #### Acceptance criteria
 
-- The content script runs on every page, including subframes (`all_frames: true`), at `document_idle`.
-- On load and on any URL change (hash change, popstate, `history.pushState`, `history.replaceState`), the content script reads all rules from storage and sets up an interval timer for each rule that matches the current URL.
-- A rule matches the current URL if the rule's `urlPattern` is a case-insensitive substring of the current `location.href`.
-- Only enabled rules produce timers.
-- If the set of matching rules changes (rules updated in storage), old timers are cancelled and new ones are started.
-- The content script guards against running twice on the same page with a `__autoClickerLoaded` flag on `globalThis`.
-- When a timer fires, the click is skipped if `document.visibilityState !== "visible"`.
-- When `activateTab` is `true`, the extension asks the background to bring the tab to the front before clicking, waits 120 ms, then clicks. If activation fails, the click is skipped for that tick.
-- Re-initialisation also occurs when the page becomes visible (`visibilitychange` event).
+- When `enabled` is `true` and the rule has a valid `urlPattern` and `selector`, the content script sets up a repeating refresh cycle.
+- The interval for each cycle is a random value in the range `[minIntervalMs, maxIntervalMs]`, chosen freshly each tick.
+- On each tick:
+  1. Take a snapshot of the page's current text content (`document.body.innerText`).
+  2. Click the configured button using the same full pointer/mouse event sequence as before.
+  3. Wait a short settle period (1–2 s) for the page to update.
+  4. Take a new snapshot.
+  5. If the two snapshots differ, fire a change notification (see Feature 3).
+  6. Update the stored baseline to the new snapshot.
+- The click is skipped if `document.visibilityState !== "visible"` and `activateTab` logic is not in use — monitoring continues regardless of tab visibility.
+- Re-initialisation occurs on URL change (hash, popstate, pushState, replaceState) and on `visibilitychange`.
+- The content script guards against running twice per page via a `__vuoropaivittajaLoaded` flag on `globalThis`.
 
 #### Element clicking
 
 - If the selector starts with `/`, `(`, or `./`, it is treated as XPath; otherwise as CSS.
-- **CSS**: The selector is tried against `document` using `querySelector`. If not found, the search recursively enters shadow roots (BFS). The first matching element wins.
-- **XPath**: `document.evaluate` with `FIRST_ORDERED_NODE_TYPE` is used. Shadow DOM is not traversed for XPath.
-- The found element is scrolled into view (`block: center`, `inline: center`, `behavior: instant`), focused, then receives a full synthetic pointer and mouse event sequence in order: `pointerover`, `mouseover`, `pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`. The element's `.click()` method is also called. All events bubble and are composed.
+- **CSS**: `querySelector` on `document`, then BFS into shadow roots if not found.
+- **XPath**: `document.evaluate` with `FIRST_ORDERED_NODE_TYPE`.
+- The element is scrolled into view, focused, then receives: `pointerover`, `mouseover`, `pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click` events, followed by `.click()`.
 
 ---
 
 ### 2. Tab reopening
 
-**As a user**, I want the extension to reopen a page automatically if its tab is closed, so I never lose the monitored page.
+**As a user**, I want the page to reopen automatically if its tab is closed, so monitoring is never interrupted.
 
 #### Acceptance criteria
 
-- The background service worker checks all enabled rules with a non-empty `targetUrl` on: extension startup, extension install, any change to the `rules` storage key, and any tab removal.
-- For each such rule, the background queries all open tabs. If no open tab has a URL that matches the rule's `urlPattern` (case-insensitive substring), the background opens `targetUrl` in a new active tab.
-- Multiple rules can trigger independent tab opens in a single check. Each opened tab is considered "open" for subsequent rules in the same check to avoid opening the same URL twice if two rules share a pattern.
+- The background service worker checks the rule on: startup, install, any change to `"settings"` or `"rule"` storage keys, and any tab removal.
+- If `enabled` is `true` and the rule has a non-empty `targetUrl`, and no open tab URL matches `urlPattern`, the background opens `targetUrl` in a new active tab.
 
 ---
 
-### 3. Popup UI
+### 3. Notifications
 
-**As a user**, I want a popup where I can create, edit, and delete rules, so I can manage automation without leaving the browser.
+**As a user**, I want to be alerted immediately when a change is detected, so I can act on it quickly.
+
+#### Acceptance criteria
+
+- When a page change is detected and `notifications` is `true`, the extension sends a Chrome desktop notification with the title `"Vuoropäivittäjä"` and body `"Uusia vuoroja saattaa olla saatavilla."` ("New slots may be available.").
+- When a page change is detected and `sound` is `true`, the extension plays a short audible alert (a simple beep generated via the Web Audio API — no audio file dependency).
+- Both alerts can fire independently (one can be on while the other is off).
+- Requires the `notifications` permission in the manifest.
+
+---
+
+### 4. Popup UI
+
+**As a user**, I want a simple settings panel where I can turn monitoring on/off and adjust the interval, so there's no unnecessary complexity.
 
 #### Layout
 
-The popup is a single vertical page (min-width 400 px) with three areas:
+The popup is a compact single-column panel with two sections:
 
-1. **Header** — extension name, current tab URL, and a "Use this site" shortcut.
-2. **Rule form section** — fields to create or edit a rule.
-3. **Rules list section** — cards for all saved rules.
+1. **Settings section** — toggles and interval inputs.
+2. **Setup section** — URL pattern, button selector (with picker), and save.
 
-#### Header
+#### Settings section
 
-- Displays the truncated URL of the currently active tab.
-- If no active tab URL is detected: `"Detecting tab…"`.
-- "Use this site" button fills the URL pattern field with the origin of the active tab's URL (scheme + host + port) and sets the hidden `targetUrl` field to the full tab URL.
+Controls (rendered as labelled toggle switches):
 
-#### Rule form
+- **Tarkkailu päällä** — maps to `enabled`. Master switch.
+- **Työpöytäilmoitus** — maps to `notifications`. Send desktop notification on change.
+- **Äänimerkki** — maps to `sound`. Play audio on change.
 
-Fields:
-- **Rule name** — optional text, placeholder `"Free slots refresh"`.
-- **URL contains** — required text; on init, pre-filled with the active tab's origin.
-- **Button selector** — required text, accepts CSS or XPath.
-- **Interval in milliseconds** — number, min `500`, step `100`, default `10000`.
-- **Activate this tab** — checkbox, default unchecked.
-- **Enable this rule** — checkbox, default checked.
+Interval inputs (two number fields, side by side):
 
-Hidden fields: `rule-id` (UUID of the rule being edited, empty for new), `target-url` (full URL for tab reopening).
+- **Min (s)** — minimum interval in seconds; stored as `minIntervalMs`. Minimum value: 2.
+- **Max (s)** — maximum interval in seconds; stored as `maxIntervalMs`. Must be ≥ min.
 
-Actions:
-- **Save rule** — validates that URL pattern and selector are non-empty; creates a new rule or updates the existing one (matched by `rule-id`); persists to storage; clears form.
-- **Clear form** — resets all fields to defaults; removes any saved draft from storage.
-- **Pick from page** — saves current form state as a draft to storage, sends a `start-picker` message to the active tab's content script, then closes the popup.
+A **Save** button persists the settings and restarts the monitoring cycle with the new values.
 
-Status area: a line below the form showing success (green) or error (red) messages.
+Status area: one line below the save button showing success or error feedback.
 
-#### Rules list
+#### Setup section
 
-- Shows an empty-state message when no rules exist.
-- Each rule renders a card with:
-  - Rule name (fallback: `"Unnamed rule"`).
-  - `"URL contains: <urlPattern>"`.
-  - `"Selector: <selector>"`.
-  - `"Every <formatted interval>"` — formatted as ms, seconds, or minutes (trimmed decimals).
-  - Enabled/Disabled badge.
-  - Selector kind chip: `"CSS"` or `"XPath"`.
-  - Behavior chip: `"Reopens closed tab"` if `targetUrl` is set; `"Activates before click"` if `activateTab`; otherwise `"Runs silently"`.
-  - **Edit** — loads the rule into the form.
-  - **Delete** — removes the rule from storage immediately.
+Shown below the settings. Allows configuring the monitored URL and button.
+
+- **URL contains** — text input; pre-filled with the active tab's origin on first open.
+- **Button selector** — text input; accepts CSS or XPath.
+  - **Pick from page** button — activates the element picker (saves form state, sends `start-picker` to the tab, closes popup).
+- **Use this site** button — fills URL contains with the active tab's origin and stores the full tab URL as `targetUrl`.
+- **Save setup** button — persists the rule.
+
+If both settings and setup are saved and valid, monitoring starts automatically.
 
 ---
 
-### 4. Element picker
+### 5. Element picker
 
-**As a user**, I want to click on a button in the page to have its selector filled in automatically, so I don't have to write CSS or XPath by hand.
+**As a user**, I want to click on the refresh button in the page to auto-detect its selector, so I don't have to write CSS or XPath by hand.
 
 #### Acceptance criteria
 
 - Activating the picker closes the popup and saves form state as a draft.
-- The content script overlays the page with a semi-transparent highlight that follows the pointer, showing the currently hovered target.
-- A fixed hint banner reads: `"Vuoropäivittäjä: click the target element, or press Escape to cancel"`.
-- Only button-like elements are selectable: `button`, `input[type="button"]`, `input[type="submit"]`, `input[type="reset"]`, `[role="button"]`. The picker walks up the composed event path to find the nearest such ancestor.
-- Clicking a target:
-  1. Prevents default and stops propagation.
-  2. Builds a selector for the element (see Selector building below).
-  3. Saves `{ selector, url: location.href, timestamp }` to `chrome.storage.local` under `lastPickedElement`.
-  4. Exits picker mode.
-- Pressing `Escape` exits picker mode without saving.
-- Picker overlay elements carry `data-auto-clicker-overlay="true"` and are excluded from selection.
+- The content script overlays the page: a highlight follows the pointer over button-like elements; a fixed hint banner reads `"Vuoropäivittäjä: click the target element, or press Escape to cancel"`.
+- Only button-like elements are selectable: `button`, `input[type="button"]`, `input[type="submit"]`, `input[type="reset"]`, `[role="button"]`.
+- On click: builds a selector, saves `{ selector, url, timestamp }` under `lastPickedElement`, exits picker.
+- `Escape` cancels without saving.
 
-#### Selector building
+#### Selector building priority
 
-The picker generates the most stable, unique selector for the picked element using this priority order:
+1. Indexed XPath `(<xpath>)[n]` if the element has duplicate matches on a preferred attribute or stable class.
+2. Unique CSS candidate: `#id`, `tag[attr]`, `tag.class`, or DOM path — first that matches exactly one element.
+3. XPath fallback: indexed attribute/class XPath, or absolute path.
 
-1. **Indexed XPath for duplicates** — for each preferred attribute with a value, builds `//<tag>[@attr=<value>]` and evaluates how many nodes it matches. If there are multiple matches, returns `(<xpath>)[n]` where `n` is the 1-based index. Also tries the first stable class name with `contains(@class)`. Returns this only if the result starts with `(` (i.e., it was indexed).
+**Preferred attributes**: `data-testid`, `data-test`, `data-automation-id`, `aria-label`, `name`, `title`, `type`, `role`.
 
-2. **CSS candidates** — builds candidates in this order and returns the first that uniquely matches the element on the page:
-   - `#<id>` (only if the ID is stable)
-   - `<tag>[<preferred-attr>="<value>"]` for each preferred attribute with a value
-   - `<tag>.<firstStableClass>`
-   - `<tag>.<allStableClasses joined by .>`
-   - `<tag>`
-   - Each of the above prefixed with up to 3 ancestor selectors (walking up the DOM)
-   - DOM path candidates (full path from element to root, progressively shorter)
+**Stable identifiers**: no whitespace, no 3+ consecutive digits, not matching `/^f[a-z0-9]+$/i`, not starting with `__`, not containing `buttoncanvas`.
 
-3. **XPath fallback** — same preferred-attribute and stable-class logic as step 1, but returns a non-indexed XPath (or `(xpath)[n]`). If none found, falls back to an absolute XPath built by walking the full DOM path with sibling indices.
+#### State restoration after pick
 
-**Preferred attributes** (checked in order): `data-testid`, `data-test`, `data-automation-id`, `aria-label`, `name`, `title`, `type`, `role`.
-
-**Stable class names**: class tokens that are 2–31 characters, match `/^[a-z][a-z0-9_-]{1,30}$/i`, and do not contain 3+ consecutive digits, do not match `/^f[a-z0-9]+$/i`, do not start with `__`, and do not contain `buttoncanvas` (case-insensitive).
-
-**Stable IDs**: same rules as stable class names (no whitespace, no 3+ consecutive digits, not `/^f[a-z0-9]+$/i`, not starting with `__`, not containing `buttoncanvas`).
-
-#### Picker state restoration
-
-When the popup opens after a pick:
-1. The draft rule (saved before picker opened) is loaded and fills the form.
-2. The `lastPickedElement` value is read: its `selector` fills the selector field; its `url` sets `targetUrl` and fills `urlPattern` with the URL's origin.
-3. Both storage keys are cleared.
-4. A status message confirms the pick.
+When the popup reopens: load draft → fill selector from `lastPickedElement` → clear both storage keys → show confirmation status.
 
 ---
 
 ## Non-functional requirements
 
-- **No build step** — all JS files are plain ES2020+ scripts with no module bundler. `shared.js` exports its API to `globalThis.AutoClickerShared` and also supports `module.exports` for Node.js test execution.
-- **Tests** — shared utility functions (`clampIntervalMs`, `urlMatches`, `looksLikeXPath`, `isStableIdentifier`, `normalizeRule`, `normalizeRules`) are covered by unit tests runnable with `node --test` (no test framework dependency).
-- **Interval clamping** — any interval below 500 ms is silently clamped to 500 ms. A legacy `intervalMinutes` field (number of minutes) is supported on read and converted to milliseconds.
-- **Shadow DOM** — CSS selector matching traverses shadow roots breadth-first. XPath does not.
-- **SPA support** — the content script patches `history.pushState` and `history.replaceState` and listens to `hashchange` and `popstate` to detect URL changes and re-initialise timers.
-- **Idempotent loading** — the content script uses a `__autoClickerLoaded` guard so injecting it twice has no effect.
-- **Popup draft persistence** — form state is not lost when the user navigates away to use the picker. The draft is saved to storage before the popup closes and restored when it reopens.
+- **No build step** — plain ES2020+ scripts; `shared.js` exports to `globalThis.VuoropaivittajaShared` and `module.exports` for Node.js tests.
+- **Tests** — shared utility functions covered by `node --test` unit tests.
+- **Interval randomisation** — each tick schedules the next with `Math.random()` in `[min, max]`.
+- **Shadow DOM** — CSS selector search traverses shadow roots BFS; XPath does not.
+- **SPA support** — patches `history.pushState`/`replaceState`, listens to `hashchange` and `popstate`.
+- **Idempotent loading** — `__vuoropaivittajaLoaded` guard prevents double-init.
+- **Draft persistence** — form state survives the picker round-trip via `draftRule` in storage.
+- **Audio** — the alert sound is generated with the Web Audio API (oscillator + gain envelope), no bundled audio file needed.
