@@ -22,7 +22,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       sendResponse({
         ok: true,
         message:
-          "Vuoropäivittäjä: klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi",
+          "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",
       });
       return false;
     }
@@ -122,7 +122,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const hint = document.createElement("div");
     hint.dataset.autoClickerOverlay = "true";
     hint.textContent =
-      "Click the target element, or press Escape to cancel";
+      "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.";
     hint.style.position = "fixed";
     hint.style.top = "16px";
     hint.style.right = "16px";
@@ -581,14 +581,14 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (!xpathElement) {
         return {
           clicked: false,
-          message: "XPath did not match any element on the page.",
+          message: "XPath ei löytänyt yhtään elementtiä sivulta.",
         };
       }
 
       triggerElementInteraction(xpathElement);
       return {
         clicked: true,
-        message: "Clicked the matching XPath element.",
+        message: "XPath-elementti klikattu onnistuneesti.",
       };
     }
 
@@ -608,7 +608,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         triggerElementInteraction(element);
         return {
           clicked: true,
-          message: "Clicked the matching element.",
+          message: "Painike klikattu onnistuneesti.",
         };
       }
 
@@ -622,7 +622,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
     return {
       clicked: false,
-      message: "Selector was not found on the page.",
+      message: "Valitsinta ei löydetty sivulta.",
     };
   }
 
