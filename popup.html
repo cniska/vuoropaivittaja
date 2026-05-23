@@ -1,110 +1,75 @@
 <!doctype html>
-<html lang="en">
+<html lang="fi">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Clicker</title>
+    <title>Vuoropäivittäjä</title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
     <main class="app">
 
-      <header class="header">
-        <span class="header-title">Auto Clicker</span>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span id="current-site" class="current-site">Detecting tab…</span>
-          <button id="use-current-site" type="button" class="secondary-button">Use this site</button>
+      <section class="section">
+        <p class="section-title">Asetukset</p>
+
+        <div class="toggles">
+          <label class="toggle">
+            <input id="enabled" type="checkbox">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Tarkkailu päällä</span>
+          </label>
+          <label class="toggle">
+            <input id="notifications" type="checkbox">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Työpöytäilmoitus</span>
+          </label>
+          <label class="toggle">
+            <input id="sound" type="checkbox">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Äänimerkki</span>
+          </label>
         </div>
-      </header>
+
+        <div class="field">
+          <label>Päivitysväli (s)</label>
+          <div class="interval-row">
+            <div class="interval-field">
+              <span class="interval-label">Min</span>
+              <input id="min-interval" type="number" min="2" step="1" value="30">
+            </div>
+            <div class="interval-field">
+              <span class="interval-label">Max</span>
+              <input id="max-interval" type="number" min="2" step="1" value="90">
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section class="section">
-        <p class="section-title" id="form-heading">New rule</p>
-        <form id="rule-form" class="rule-form">
-          <input id="rule-id" type="hidden">
-          <input id="target-url" type="hidden">
+        <p class="section-title">Kohde</p>
 
-          <div class="field-row">
-            <div class="field">
-              <label for="name">Rule name</label>
-              <input id="name" name="name" type="text" placeholder="Free slots refresh">
-            </div>
-            <div class="field">
-              <label for="url-pattern">URL contains</label>
-              <input id="url-pattern" name="urlPattern" type="text" placeholder="example.com/appointments">
-            </div>
+        <div class="field">
+          <label>Seurattava sivu</label>
+          <p id="target-url-display" class="site-display">Ei asetettu</p>
+          <button id="set-current-site" type="button" class="secondary-button">Aseta nykyinen sivu</button>
+        </div>
+
+        <div class="field">
+          <label for="selector">Painikkeen valitsin</label>
+          <input id="selector" type="text" placeholder='button[aria-label="Päivitä luettelo"]'>
+          <div class="field-actions">
+            <button id="pick-element" type="button" class="secondary-button">Valitse sivulta</button>
+            <button id="test-selector" type="button" class="secondary-button">Testaa</button>
           </div>
+        </div>
+      </section>
 
-          <div class="field">
-            <label for="selector">Button selector</label>
-            <input id="selector" name="selector" type="text" placeholder='button[data-test="refresh"]' required>
-            <div class="field-actions">
-              <button id="pick-element" type="button" class="secondary-button">Pick from page</button>
-              <span class="field-hint">CSS selector or XPath. Use the picker to auto-detect.</span>
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="interval">Interval (ms)</label>
-              <input id="interval" name="interval" type="number" min="500" step="100" value="10000" required>
-              <span class="field-hint">Min 500 ms · Default 10 000 ms</span>
-            </div>
-            <div class="toggles">
-              <label class="toggle">
-                <input id="activate-tab" name="activateTab" type="checkbox">
-                <span class="toggle-label">
-                  <strong>Activate tab</strong>
-                  <small>Bring page to front before clicking</small>
-                </span>
-              </label>
-              <label class="toggle">
-                <input id="enabled" name="enabled" type="checkbox" checked>
-                <span class="toggle-label">
-                  <strong>Enable rule</strong>
-                  <small>Reopen tab if it gets closed</small>
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button type="submit" class="primary-button">Save rule</button>
-            <button id="test-rule" type="button" class="secondary-button">Test on current tab</button>
-            <button id="reset-form" type="button" class="ghost-button">Clear</button>
-          </div>
-        </form>
-
+      <div class="footer">
+        <button id="save" type="button" class="primary-button">Tallenna</button>
         <p id="status" class="status" role="status"></p>
-      </section>
-
-      <section class="section">
-        <p class="section-title">Saved rules</p>
-        <div id="empty-state" class="empty-state">No rules yet.</div>
-        <div id="rules-list" class="rules-list"></div>
-      </section>
+      </div>
 
     </main>
-
-    <template id="rule-item-template">
-      <article class="rule-card">
-        <div class="rule-card-header">
-          <h3 class="rule-title"></h3>
-          <span class="rule-badge"></span>
-        </div>
-        <div class="rule-meta">
-          <span class="meta-chip rule-selector-kind"></span>
-          <span class="meta-chip rule-behavior"></span>
-        </div>
-        <p class="rule-url"></p>
-        <p class="rule-selector"></p>
-        <p class="rule-interval"></p>
-        <div class="rule-actions">
-          <button type="button" class="secondary-button edit-rule">Edit</button>
-          <button type="button" class="secondary-button test-existing-rule">Test</button>
-          <button type="button" class="ghost-button delete-rule">Delete</button>
-        </div>
-      </article>
-    </template>
 
     <script src="shared.js"></script>
     <script src="popup.js"></script>

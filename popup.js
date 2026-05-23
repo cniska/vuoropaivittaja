@@ -1,399 +1,210 @@
-const STORAGE_KEY = "rules";
-const PICK_RESULT_KEY = "lastPickedElement";
-const DRAFT_RULE_KEY = "draftRule";
-const { DEFAULT_INTERVAL_MS, normalizeRules, clampIntervalMs, looksLikeXPath } =
-  globalThis.AutoClickerShared;
+const { normalizeSettings, normalizeRule } = globalThis.VuoropaivittajaShared;
 
-const form = document.getElementById("rule-form");
-const ruleIdInput = document.getElementById("rule-id");
-const targetUrlInput = document.getElementById("target-url");
-const nameInput = document.getElementById("name");
-const urlPatternInput = document.getElementById("url-pattern");
-const selectorInput = document.getElementById("selector");
-const activateTabInput = document.getElementById("activate-tab");
-const intervalInput = document.getElementById("interval");
+const SETTINGS_KEY = "settings";
+const RULE_KEY = "rule";
+const PICK_RESULT_KEY = "lastPickedElement";
+const DRAFT_KEY = "draftRule";
+
 const enabledInput = document.getElementById("enabled");
+const notificationsInput = document.getElementById("notifications");
+const soundInput = document.getElementById("sound");
+const minIntervalInput = document.getElementById("min-interval");
+const maxIntervalInput = document.getElementById("max-interval");
+const targetUrlDisplay = document.getElementById("target-url-display");
+const setCurrentSiteButton = document.getElementById("set-current-site");
+const selectorInput = document.getElementById("selector");
 const pickElementButton = document.getElementById("pick-element");
-const statusElement = document.getElementById("status");
-const currentSiteElement = document.getElementById("current-site");
-const useCurrentSiteButton = document.getElementById("use-current-site");
-const resetFormButton = document.getElementById("reset-form");
-const testRuleButton = document.getElementById("test-rule");
-const rulesList = document.getElementById("rules-list");
-const emptyState = document.getElementById("empty-state");
-const ruleItemTemplate = document.getElementById("rule-item-template");
+const testSelectorButton = document.getElementById("test-selector");
+const saveButton = document.getElementById("save");
+const statusEl = document.getElementById("status");
 
 let activeTab = null;
-let rules = [];
+let savedTargetUrl = "";
+let savedUrlPattern = "";
 
 void initialize();
 
 async function initialize() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  activeTab = tab || null;
+  activeTab = tab ?? null;
 
-  currentSiteElement.textContent = activeTab?.url
-    ? `Current tab: ${activeTab.url}`
-    : "Open the site you want to automate, then reopen this popup.";
-
-  const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
-  rules = normalizeRules(stored[STORAGE_KEY], {
-    createId: () => crypto.randomUUID(),
+  const stored = await chrome.storage.local.get({
+    [SETTINGS_KEY]: {},
+    [RULE_KEY]: {},
   });
-  renderRules();
 
-  if (!urlPatternInput.value && activeTab?.url) {
-    urlPatternInput.value = defaultPatternFor(activeTab.url);
-  }
+  fillSettings(normalizeSettings(stored[SETTINGS_KEY]));
+  fillRule(normalizeRule(stored[RULE_KEY]));
 
-  await loadDraftRule();
+  await loadDraft();
   await loadPickedElement();
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+saveButton.addEventListener("click", async () => {
+  const minSec = Number(minIntervalInput.value);
+  const maxSec = Number(maxIntervalInput.value);
 
-  const trimmedPattern = urlPatternInput.value.trim();
-  const trimmedSelector = selectorInput.value.trim();
-  if (!trimmedPattern || !trimmedSelector) {
-    setStatus("URL pattern and selector are required.", true);
+  if (!Number.isFinite(minSec) || minSec < 2) {
+    setStatus("Minimitarkkailuväli on vähintään 2 sekuntia.", true);
     return;
   }
 
-  const intervalMs = clampIntervalMs(intervalInput.value);
-  const id = ruleIdInput.value || crypto.randomUUID();
-  const nextRule = {
-    id,
-    name: nameInput.value.trim(),
-    urlPattern: trimmedPattern,
-    selector: trimmedSelector,
-    targetUrl: getTargetUrlFromForm(),
-    activateTab: activateTabInput.checked,
-    intervalMs,
-    enabled: enabledInput.checked,
-  };
-
-  const existingIndex = rules.findIndex((rule) => rule.id === id);
-  if (existingIndex >= 0) {
-    rules.splice(existingIndex, 1, nextRule);
-    setStatus("Rule updated.");
-  } else {
-    rules.unshift(nextRule);
-    setStatus("Rule saved.");
+  if (!Number.isFinite(maxSec) || maxSec < minSec) {
+    setStatus("Maksimitarkkailuväli ei voi olla pienempi kuin minimi.", true);
+    return;
   }
 
-  await persistRules();
-  await clearDraftRule();
-  clearForm();
-  renderRules();
+  await chrome.storage.local.set({
+    [SETTINGS_KEY]: {
+      enabled: enabledInput.checked,
+      notifications: notificationsInput.checked,
+      sound: soundInput.checked,
+      minIntervalMs: minSec * 1000,
+      maxIntervalMs: maxSec * 1000,
+    },
+    [RULE_KEY]: {
+      urlPattern: savedUrlPattern,
+      selector: selectorInput.value.trim(),
+      listSelector: "",
+      targetUrl: savedTargetUrl,
+    },
+  });
+
+  setStatus("Tallennettu.");
 });
 
-useCurrentSiteButton.addEventListener("click", () => {
+setCurrentSiteButton.addEventListener("click", () => {
   if (!activeTab?.url) {
-    setStatus("No current tab URL found.", true);
+    setStatus("Ei aktiivista välilehteä.", true);
     return;
   }
 
-  urlPatternInput.value = defaultPatternFor(activeTab.url);
-  targetUrlInput.value = activeTab.url;
-  setStatus("Filled in the current site.");
-});
-
-resetFormButton.addEventListener("click", async () => {
-  await clearDraftRule();
-  clearForm();
-  setStatus("Form cleared.");
-});
-
-testRuleButton.addEventListener("click", async () => {
-  if (!activeTab?.id) {
-    setStatus("Open the target site in a browser tab first.", true);
-    return;
-  }
-
-  const rule = {
-    urlPattern: urlPatternInput.value.trim(),
-    selector: selectorInput.value.trim(),
-    activateTab: activateTabInput.checked,
-    intervalMs: clampIntervalMs(intervalInput.value),
-    enabled: enabledInput.checked,
-  };
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: "test-rule-in-tab",
-      tabId: activeTab.id,
-      rule,
-    });
-    setStatus(
-      response?.ok ? response.message : response?.error || "Test failed.",
-      !response?.ok
-    );
-  } catch {
-    setStatus(
-      "Could not contact the page. Refresh it once and try again.",
-      true
-    );
-  }
+  savedTargetUrl = activeTab.url;
+  savedUrlPattern = originOf(activeTab.url);
+  targetUrlDisplay.textContent = activeTab.url;
+  setStatus("Nykyinen sivu asetettu.");
 });
 
 pickElementButton.addEventListener("click", async () => {
   if (!activeTab?.id) {
-    setStatus("Open the target site in a browser tab first.", true);
+    setStatus("Avaa kohdesivusto ensin.", true);
     return;
   }
 
   try {
-    await saveDraftRule();
-    const response = await sendToActiveTab({ type: "start-picker" });
-    setStatus(
-      response?.message ||
-        "Click the target element on the page, then reopen this popup.",
-      !response?.ok
-    );
+    await saveDraft();
+    await sendToActiveTab({ type: "start-picker" });
     window.close();
   } catch {
-    setStatus(
-      "Could not start picker. Refresh the page once and try again.",
-      true
-    );
+    setStatus("Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä uudelleen.", true);
   }
 });
 
-function renderRules() {
-  rulesList.textContent = "";
-  emptyState.hidden = rules.length > 0;
-
-  for (const rule of rules) {
-    const fragment = ruleItemTemplate.content.cloneNode(true);
-    const card = fragment.querySelector(".rule-card");
-    const title = fragment.querySelector(".rule-title");
-    const url = fragment.querySelector(".rule-url");
-    const selector = fragment.querySelector(".rule-selector");
-    const interval = fragment.querySelector(".rule-interval");
-    const badge = fragment.querySelector(".rule-badge");
-    const selectorKind = fragment.querySelector(".rule-selector-kind");
-    const behavior = fragment.querySelector(".rule-behavior");
-    const editButton = fragment.querySelector(".edit-rule");
-    const testButton = fragment.querySelector(".test-existing-rule");
-    const deleteButton = fragment.querySelector(".delete-rule");
-
-    title.textContent = rule.name || "Unnamed rule";
-    url.textContent = `URL contains: ${rule.urlPattern}`;
-    selector.textContent = `Selector: ${rule.selector}${rule.activateTab ? " (activates tab)" : ""}`;
-    interval.textContent = `Every ${formatInterval(rule.intervalMs)}`;
-    badge.textContent = rule.enabled ? "Enabled" : "Disabled";
-    badge.dataset.state = rule.enabled ? "enabled" : "disabled";
-    selectorKind.textContent = looksLikeXPath(rule.selector) ? "XPath" : "CSS";
-    behavior.textContent = rule.targetUrl
-      ? "Reopens closed tab"
-      : rule.activateTab
-        ? "Activates before click"
-        : "Runs on current page";
-
-    editButton.addEventListener("click", () => {
-      populateForm(rule);
-      setStatus("Loaded rule into the form.");
-    });
-
-    testButton.addEventListener("click", async () => {
-      if (!activeTab?.id) {
-        setStatus("Open the target site in a browser tab first.", true);
-        return;
-      }
-
-      try {
-        const response = await chrome.runtime.sendMessage({
-          type: "test-rule-in-tab",
-          tabId: activeTab.id,
-          rule,
-        });
-        setStatus(
-          response?.ok ? response.message : response?.error || "Test failed.",
-          !response?.ok
-        );
-      } catch {
-        setStatus(
-          "Could not contact the page. Refresh it once and try again.",
-          true
-        );
-      }
-    });
-
-    deleteButton.addEventListener("click", async () => {
-      rules = rules.filter((entry) => entry.id !== rule.id);
-      await persistRules();
-      renderRules();
-      if (ruleIdInput.value === rule.id) {
-        clearForm();
-      }
-      setStatus("Rule deleted.");
-    });
-
-    card.dataset.ruleId = rule.id;
-    rulesList.appendChild(fragment);
+testSelectorButton.addEventListener("click", async () => {
+  if (!activeTab?.id) {
+    setStatus("Avaa kohdesivusto ensin.", true);
+    return;
   }
+
+  const selector = selectorInput.value.trim();
+  if (!selector) {
+    setStatus("Syötä valitsin ensin.", true);
+    return;
+  }
+
+  try {
+    const response = await sendToActiveTab({
+      type: "test-rule",
+      rule: { urlPattern: savedUrlPattern || originOf(activeTab.url ?? ""), selector },
+    });
+    setStatus(
+      response?.ok ? response.message : (response?.error ?? "Testi epäonnistui."),
+      !response?.ok
+    );
+  } catch {
+    setStatus("Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.", true);
+  }
+});
+
+function fillSettings(settings) {
+  enabledInput.checked = settings.enabled;
+  notificationsInput.checked = settings.notifications;
+  soundInput.checked = settings.sound;
+  minIntervalInput.value = String(settings.minIntervalMs / 1000);
+  maxIntervalInput.value = String(settings.maxIntervalMs / 1000);
 }
 
-function populateForm(rule) {
-  ruleIdInput.value = rule.id;
-  targetUrlInput.value = rule.targetUrl || "";
-  nameInput.value = rule.name || "";
-  urlPatternInput.value = rule.urlPattern;
+function fillRule(rule) {
+  if (!rule) return;
+  savedUrlPattern = rule.urlPattern;
+  savedTargetUrl = rule.targetUrl;
   selectorInput.value = rule.selector;
-  activateTabInput.checked = Boolean(rule.activateTab);
-  intervalInput.value = String(rule.intervalMs);
-  enabledInput.checked = rule.enabled;
-}
-
-function clearForm() {
-  ruleIdInput.value = "";
-  targetUrlInput.value = activeTab?.url || "";
-  nameInput.value = "";
-  selectorInput.value = "";
-  activateTabInput.checked = false;
-  intervalInput.value = String(DEFAULT_INTERVAL_MS);
-  enabledInput.checked = true;
-  urlPatternInput.value = activeTab?.url
-    ? defaultPatternFor(activeTab.url)
-    : "";
-}
-
-function getDraftRuleFromForm() {
-  return {
-    id: ruleIdInput.value.trim(),
-    targetUrl: getTargetUrlFromForm(),
-    name: nameInput.value.trim(),
-    urlPattern: urlPatternInput.value.trim(),
-    selector: selectorInput.value.trim(),
-    activateTab: activateTabInput.checked,
-    intervalMs: clampIntervalMs(intervalInput.value),
-    enabled: enabledInput.checked,
-  };
+  targetUrlDisplay.textContent = rule.targetUrl || "Ei asetettu";
 }
 
 function setStatus(message, isError = false) {
-  statusElement.textContent = message;
-  statusElement.dataset.state = isError ? "error" : "success";
+  statusEl.textContent = message;
+  statusEl.dataset.state = isError ? "error" : "success";
 }
 
-async function persistRules() {
-  rules = normalizeRules(rules);
-  await chrome.storage.local.set({ [STORAGE_KEY]: rules });
+async function saveDraft() {
+  await chrome.storage.local.set({
+    [DRAFT_KEY]: {
+      urlPattern: savedUrlPattern,
+      targetUrl: savedTargetUrl,
+      selector: selectorInput.value.trim(),
+    },
+  });
 }
 
-function formatInterval(intervalMs) {
-  if (intervalMs < 1000) {
-    return `${intervalMs} ms`;
-  }
+async function loadDraft() {
+  const stored = await chrome.storage.local.get({ [DRAFT_KEY]: null });
+  const draft = stored[DRAFT_KEY];
+  if (!draft || typeof draft !== "object") return;
 
-  const seconds = intervalMs / 1000;
-  if (seconds < 60) {
-    return `${trimNumber(seconds)} second${seconds === 1 ? "" : "s"}`;
-  }
+  savedUrlPattern = String(draft.urlPattern ?? "");
+  savedTargetUrl = String(draft.targetUrl ?? "");
+  selectorInput.value = String(draft.selector ?? "");
+  if (savedTargetUrl) targetUrlDisplay.textContent = savedTargetUrl;
 
-  const minutes = seconds / 60;
-  return `${trimNumber(minutes)} minute${minutes === 1 ? "" : "s"}`;
-}
-
-function trimNumber(value) {
-  return Number.isInteger(value)
-    ? String(value)
-    : value.toFixed(2).replace(/\.?0+$/, "");
-}
-
-function defaultPatternFor(url) {
-  try {
-    const parsed = new URL(url);
-    return parsed.origin;
-  } catch {
-    return url;
-  }
+  await chrome.storage.local.remove(DRAFT_KEY);
 }
 
 async function loadPickedElement() {
   const stored = await chrome.storage.local.get({ [PICK_RESULT_KEY]: null });
   const picked = stored[PICK_RESULT_KEY];
-  if (!picked || typeof picked.selector !== "string") {
-    return;
-  }
+  if (!picked?.selector) return;
 
   selectorInput.value = picked.selector;
-  if (typeof picked.url === "string" && picked.url) {
-    targetUrlInput.value = picked.url;
-    urlPatternInput.value = defaultPatternFor(picked.url);
-  } else if (!urlPatternInput.value && activeTab?.url) {
-    targetUrlInput.value = activeTab.url;
-    urlPatternInput.value = defaultPatternFor(activeTab.url);
+  if (picked.url) {
+    savedTargetUrl = picked.url;
+    savedUrlPattern = originOf(picked.url);
+    targetUrlDisplay.textContent = picked.url;
   }
 
   await chrome.storage.local.remove(PICK_RESULT_KEY);
-  setStatus(
-    typeof picked.url === "string" && picked.url
-      ? `Filled selector from picked frame: ${defaultPatternFor(picked.url)}`
-      : `Filled selector from page pick: ${picked.selector}`
-  );
+  setStatus("Painike valittu sivulta.");
 }
 
-async function saveDraftRule() {
-  await chrome.storage.local.set({
-    [DRAFT_RULE_KEY]: getDraftRuleFromForm(),
-  });
-}
-
-async function loadDraftRule() {
-  const stored = await chrome.storage.local.get({ [DRAFT_RULE_KEY]: null });
-  const draft = stored[DRAFT_RULE_KEY];
-  if (!draft || typeof draft !== "object") {
-    return;
+function originOf(url) {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url;
   }
-
-  populateForm({
-    id: String(draft.id || ""),
-    targetUrl: String(draft.targetUrl || "").trim(),
-    name: String(draft.name || "").trim(),
-    urlPattern: String(draft.urlPattern || "").trim(),
-    selector: String(draft.selector || "").trim(),
-    activateTab: Boolean(draft.activateTab),
-    intervalMs: clampIntervalMs(draft.intervalMs, draft.intervalMinutes),
-    enabled: Boolean(draft.enabled),
-  });
-
-  await clearDraftRule();
-  setStatus("Restored your in-progress edit.");
-}
-
-async function clearDraftRule() {
-  await chrome.storage.local.remove(DRAFT_RULE_KEY);
 }
 
 async function sendToActiveTab(message) {
-  if (!activeTab?.id) {
-    throw new Error("No active tab");
-  }
+  if (!activeTab?.id) throw new Error("Ei aktiivista välilehteä.");
 
   try {
     return await chrome.tabs.sendMessage(activeTab.id, message);
   } catch (error) {
-    const errorMessage = error?.message || "";
-    if (!errorMessage.includes("Receiving end does not exist")) {
-      throw error;
-    }
-
+    if (!error?.message?.includes("Receiving end does not exist")) throw error;
     await chrome.scripting.executeScript({
       target: { tabId: activeTab.id, allFrames: true },
       files: ["content.js"],
     });
-
     return chrome.tabs.sendMessage(activeTab.id, message);
   }
-}
-
-function getTargetUrlFromForm() {
-  const explicitTarget = targetUrlInput.value.trim();
-  if (explicitTarget) {
-    return explicitTarget;
-  }
-
-  return activeTab?.url || "";
 }
