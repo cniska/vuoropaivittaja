@@ -21,6 +21,7 @@
       notifications:
         s.notifications === undefined ? true : Boolean(s.notifications),
       sound: s.sound === undefined ? true : Boolean(s.sound),
+      debugLogging: Boolean(s.debugLogging),
       minIntervalMs,
       maxIntervalMs,
     };
@@ -63,6 +64,67 @@
       type: "change-detected",
       notifications: normalized.notifications,
       sound: normalized.sound,
+      debugLogging: normalized.debugLogging,
+    };
+  }
+
+  function createLogger(namespace, isEnabled) {
+    function shouldLog() {
+      return typeof isEnabled === "function"
+        ? Boolean(isEnabled())
+        : Boolean(isEnabled);
+    }
+
+    function hasMeta(meta) {
+      return meta && typeof meta === "object" && Object.keys(meta).length > 0;
+    }
+
+    function emit(level, message, meta = {}) {
+      const text = String(message || "");
+      const title = `Vuoropäivittäjä · ${namespace} · ${text}`;
+      const write = console[level] || console.info;
+      const grouped =
+        hasMeta(meta) && typeof console.groupCollapsed === "function";
+
+      if (grouped) {
+        console.groupCollapsed(title);
+        write.call(console, {
+          app: "Vuoropäivittäjä",
+          scope: namespace,
+          level,
+          message: text,
+          ...meta,
+        });
+        console.groupEnd();
+        return;
+      }
+
+      write.call(console, title, {
+        app: "Vuoropäivittäjä",
+        scope: namespace,
+        level,
+        message: text,
+        ...meta,
+      });
+    }
+
+    return {
+      debug(message, meta = {}) {
+        if (shouldLog()) {
+          emit("info", message, meta);
+        }
+      },
+      info(message, meta = {}) {
+        if (shouldLog()) {
+          emit("info", message, meta);
+        }
+      },
+      warn(message, meta = {}) {
+        emit("warn", message, meta);
+      },
+      error(message, meta = {}) {
+        emit("error", message, meta);
+      },
     };
   }
 
@@ -95,6 +157,7 @@
     normalizeRule,
     shouldMonitorTab,
     buildChangeAlertMessage,
+    createLogger,
     urlMatches,
     looksLikeXPath,
     isStableIdentifier,

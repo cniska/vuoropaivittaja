@@ -1,14 +1,28 @@
 importScripts("shared.js");
 
-const { normalizeSettings, normalizeRule, shouldMonitorTab, urlMatches } =
-  self.VuoropaivittajaShared;
+const {
+  normalizeSettings,
+  normalizeRule,
+  shouldMonitorTab,
+  urlMatches,
+  createLogger,
+} = self.VuoropaivittajaShared;
 
 const OFFSCREEN_DOCUMENT = "offscreen.html";
 const PICK_RESULT_KEY = "lastPickedElement";
 let creatingOffscreenDocument = null;
+let debugLoggingEnabled = false;
+const logger = createLogger("background", () => debugLoggingEnabled);
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "change-detected") {
+    debugLoggingEnabled = Boolean(message.debugLogging);
+    logger.info("Muutos havaittiin.", {
+      event: "change-detected",
+      notifications: Boolean(message.notifications),
+      sound: Boolean(message.sound),
+      debugLogging: debugLoggingEnabled,
+    });
     void fireChangeAlert(message)
       .catch(() => {})
       .finally(() => {
@@ -18,6 +32,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "element-picked") {
+    logger.info("Painike valittiin sivulta.", {
+      event: "element-picked",
+      selector: String(message.selector || ""),
+      tabId: sender.tab?.id ?? null,
+      frameId: sender.frameId ?? null,
+    });
     void chrome.storage.local.set({
       [PICK_RESULT_KEY]: {
         selector: String(message.selector || ""),
@@ -31,6 +51,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "stop-picker") {
+    logger.info("Valitsin suljettiin.", {
+      event: "stop-picker",
+      tabId: sender.tab?.id ?? null,
+      frameId: sender.frameId ?? null,
+    });
     if (sender.tab?.id) {
       void chrome.tabs
         .sendMessage(sender.tab.id, { type: "stop-picker" })
@@ -44,6 +69,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const settings = normalizeSettings(message.settings);
     const rule = normalizeRule(message.rule);
     const tabUrl = sender.tab?.url ?? "";
+    debugLoggingEnabled = Boolean(settings.debugLogging);
+    logger.info("Tarkistetaan, pitäisikö välilehteä seurata.", {
+      event: "should-monitor-tab",
+      shouldMonitor: shouldMonitorTab(settings, rule, tabUrl),
+      tabUrl,
+      urlPattern: rule?.urlPattern ?? "",
+    });
     sendResponse({
       ok: true,
       shouldMonitor: shouldMonitorTab(settings, rule, tabUrl),
@@ -82,6 +114,13 @@ async function disableIfNoMatchingTab() {
     await chrome.storage.local.set({
       settings: { ...rawSettings, enabled: false },
     });
+    logger.info(
+      "Tarkkailu poistettiin käytöstä, koska viimeinen välilehti suljettiin.",
+      {
+        event: "disabled-on-tab-close",
+        urlPattern: rule.urlPattern,
+      }
+    );
   }
 }
 
@@ -89,14 +128,7 @@ async function fireChangeAlert(message) {
   const alerts = [];
 
   if (message.notifications) {
-    alerts.push(
-      chrome.notifications.create("vuoropaivittaja-change", {
-        type: "basic",
-        iconUrl: "icon.png",
-        title: "Vuoropäivittäjä",
-        message: "Uusia vuoroja saattaa olla saatavilla.",
-      })
-    );
+    alerts.push(createNotification());
   }
 
   if (message.sound) {
@@ -106,7 +138,53 @@ async function fireChangeAlert(message) {
   await Promise.allSettled(alerts);
 }
 
+async function createNotification() {
+  const permissionLevel = await chrome.notifications.getPermissionLevel();
+  logger.info("Tarkistetaan työpöytäilmoitusten oikeus.", {
+    event: "notification-permission",
+    permissionLevel,
+  });
+  if (permissionLevel !== "granted") {
+    await chrome.runtime.sendMessage({
+      type: "notification-result",
+      ok: false,
+      message: "Työpöytäilmoitukset on estetty Chromessa.",
+    });
+    return;
+  }
+
+  try {
+    await chrome.notifications.create(notificationId(), {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("icon.png"),
+      title: "Vuoropäivittäjä",
+      message: "Uusia vuoroja saattaa olla saatavilla.",
+    });
+    logger.info("Työpöytäilmoitus lähetettiin.", {
+      event: "notification-created",
+      notificationId: "generated",
+    });
+    await chrome.runtime.sendMessage({
+      type: "notification-result",
+      ok: true,
+      message: "Työpöytäilmoitus lähetetty.",
+    });
+  } catch {
+    logger.warn("Työpöytäilmoituksen luonti epäonnistui.", {
+      event: "notification-create-failed",
+    });
+    await chrome.runtime.sendMessage({
+      type: "notification-result",
+      ok: false,
+      message: "Työpöytäilmoitus ei onnistunut.",
+    });
+  }
+}
+
 async function playAlertSound() {
+  logger.info("Soitetaan ilmoitusääni.", {
+    event: "play-alert-sound",
+  });
   await ensureOffscreenDocument();
   await chrome.runtime.sendMessage({ type: "play-alert-sound" });
 }
@@ -135,4 +213,10 @@ async function ensureOffscreenDocument() {
   } finally {
     creatingOffscreenDocument = null;
   }
+}
+
+function notificationId() {
+  return `vuoropaivittaja-change-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
 }

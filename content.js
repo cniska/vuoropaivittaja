@@ -6,6 +6,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     normalizeRule,
     shouldMonitorTab,
     buildChangeAlertMessage,
+    createLogger,
     looksLikeXPath,
     isStableIdentifier,
   } = globalThis.VuoropaivittajaShared;
@@ -13,6 +14,8 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   let lastUrl = location.href;
   let pickerState = null;
   let monitoringSession = 0;
+  let debugLoggingEnabled = false;
+  const logger = createLogger("content", () => debugLoggingEnabled);
 
   void initialize();
 
@@ -73,6 +76,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const stored = await chrome.storage.local.get({ settings: {}, rule: {} });
     const settings = normalizeSettings(stored.settings);
     const rule = normalizeRule(stored.rule);
+    debugLoggingEnabled = Boolean(settings.debugLogging);
+    logger.info("Sisältösarja alustettiin.", {
+      event: "initialize",
+      enabled: settings.enabled,
+      debugLogging: debugLoggingEnabled,
+      hasRule: Boolean(rule),
+    });
 
     monitoringSession += 1;
     const session = monitoringSession;
@@ -104,6 +114,12 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   }
 
   async function startMonitoring(settings, rule, session) {
+    logger.info("Tarkkailusilmukka käynnistyi.", {
+      event: "monitoring-started",
+      session,
+      selector: rule.selector,
+      listSelector: rule.listSelector,
+    });
     while (monitoringSession === session) {
       await delay(
         randomInterval(settings.minIntervalMs, settings.maxIntervalMs)
@@ -112,6 +128,12 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
       const before = takeSnapshot(rule.listSelector);
       const clickResult = clickSelectorInPage(rule.selector);
+      logger.info("Päivitä-painike käsiteltiin.", {
+        event: "monitor-click",
+        clicked: clickResult.clicked,
+        message: clickResult.message,
+        session,
+      });
       void chrome.runtime
         .sendMessage({
           type: "monitor-clicked",
@@ -127,6 +149,12 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
       const after = takeSnapshot(rule.listSelector);
       if (JSON.stringify(after) !== JSON.stringify(before)) {
+        logger.info("Muutos havaittiin snapshotissa.", {
+          event: "change-detected",
+          session,
+          notifications: settings.notifications,
+          sound: settings.sound,
+        });
         fireChangeNotification(settings);
       }
     }
@@ -192,6 +220,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   }
 
   function fireChangeNotification(settings) {
+    logger.info("Ilmoitus lähetettiin taustalle.", {
+      event: "alert-dispatched",
+      notifications: settings.notifications,
+      sound: settings.sound,
+    });
     void chrome.runtime.sendMessage(buildChangeAlertMessage(settings));
   }
 
@@ -225,6 +258,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
   function startPicker() {
     stopPicker();
+    logger.info("Valitsin käynnistyi sivulla.", { event: "picker-started" });
 
     const overlay = document.createElement("div");
     overlay.dataset.autoClickerOverlay = "true";
@@ -329,6 +363,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
     pickerState.cleanup();
     pickerState = null;
+    logger.info("Valitsin suljettiin sivulla.", { event: "picker-stopped" });
   }
 
   function getSelectableElement(event) {

@@ -40,6 +40,11 @@ test("normalizeSettings respects notifications and sound flags", () => {
   assert.equal(s.sound, false);
 });
 
+test("normalizeSettings respects debugLogging flag", () => {
+  assert.equal(normalizeSettings({ debugLogging: true }).debugLogging, true);
+  assert.equal(normalizeSettings({ debugLogging: false }).debugLogging, false);
+});
+
 test("normalizeSettings clamps minIntervalMs to 2000", () => {
   assert.equal(normalizeSettings({ minIntervalMs: 500 }).minIntervalMs, 2000);
   assert.equal(normalizeSettings({ minIntervalMs: 2000 }).minIntervalMs, 2000);
@@ -137,21 +142,135 @@ test("shouldMonitorTab requires enabled settings, a valid rule, and a matching t
 
 test("buildChangeAlertMessage preserves independent alert toggles", () => {
   assert.deepEqual(
-    buildChangeAlertMessage({ notifications: true, sound: false }),
+    buildChangeAlertMessage({
+      notifications: true,
+      sound: false,
+      debugLogging: true,
+    }),
     {
       type: "change-detected",
       notifications: true,
       sound: false,
+      debugLogging: true,
     }
   );
   assert.deepEqual(
-    buildChangeAlertMessage({ notifications: false, sound: true }),
+    buildChangeAlertMessage({
+      notifications: false,
+      sound: true,
+      debugLogging: false,
+    }),
     {
       type: "change-detected",
       notifications: false,
       sound: true,
+      debugLogging: false,
     }
   );
+});
+
+test("createLogger emits structured payloads", () => {
+  const calls = [];
+  const originals = {
+    groupCollapsed: console.groupCollapsed,
+    groupEnd: console.groupEnd,
+    debug: console.debug,
+    info: console.info,
+    warn: console.warn,
+    error: console.error,
+  };
+
+  console.groupCollapsed = (...args) => calls.push(["groupCollapsed", args]);
+  console.groupEnd = (...args) => calls.push(["groupEnd", args]);
+  console.debug = (...args) => calls.push(["debug", args]);
+  console.info = (...args) => calls.push(["info", args]);
+  console.warn = (...args) => calls.push(["warn", args]);
+  console.error = (...args) => calls.push(["error", args]);
+
+  try {
+    const logger = global.VuoropaivittajaShared.createLogger("popup", true);
+    logger.debug("Tallennus valmis.", { event: "save", status: "ok" });
+    logger.info("Valmis.", { event: "ready" });
+    logger.warn("Varoitus.", { event: "warning" });
+    logger.error("Virhe.", { event: "failure" });
+  } finally {
+    console.groupCollapsed = originals.groupCollapsed;
+    console.groupEnd = originals.groupEnd;
+    console.debug = originals.debug;
+    console.info = originals.info;
+    console.warn = originals.warn;
+    console.error = originals.error;
+  }
+
+  assert.deepEqual(calls[0], [
+    "groupCollapsed",
+    ["Vuoropäivittäjä · popup · Tallennus valmis."],
+  ]);
+  assert.deepEqual(calls[1], [
+    "info",
+    [
+      {
+        app: "Vuoropäivittäjä",
+        scope: "popup",
+        level: "info",
+        message: "Tallennus valmis.",
+        event: "save",
+        status: "ok",
+      },
+    ],
+  ]);
+  assert.deepEqual(calls[2], ["groupEnd", []]);
+  assert.deepEqual(calls[3], [
+    "groupCollapsed",
+    ["Vuoropäivittäjä · popup · Valmis."],
+  ]);
+  assert.deepEqual(calls[4], [
+    "info",
+    [
+      {
+        app: "Vuoropäivittäjä",
+        scope: "popup",
+        level: "info",
+        message: "Valmis.",
+        event: "ready",
+      },
+    ],
+  ]);
+  assert.deepEqual(calls[5], ["groupEnd", []]);
+  assert.deepEqual(calls[6], [
+    "groupCollapsed",
+    ["Vuoropäivittäjä · popup · Varoitus."],
+  ]);
+  assert.deepEqual(calls[7], [
+    "warn",
+    [
+      {
+        app: "Vuoropäivittäjä",
+        scope: "popup",
+        level: "warn",
+        message: "Varoitus.",
+        event: "warning",
+      },
+    ],
+  ]);
+  assert.deepEqual(calls[8], ["groupEnd", []]);
+  assert.deepEqual(calls[9], [
+    "groupCollapsed",
+    ["Vuoropäivittäjä · popup · Virhe."],
+  ]);
+  assert.deepEqual(calls[10], [
+    "error",
+    [
+      {
+        app: "Vuoropäivittäjä",
+        scope: "popup",
+        level: "error",
+        message: "Virhe.",
+        event: "failure",
+      },
+    ],
+  ]);
+  assert.deepEqual(calls[11], ["groupEnd", []]);
 });
 
 // urlMatches

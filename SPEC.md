@@ -75,6 +75,7 @@ All persistent state lives in `chrome.storage.local`.
 | `enabled` | boolean | `false` | Master monitoring toggle |
 | `notifications` | boolean | `true` | Desktop notification toggle |
 | `sound` | boolean | `true` | Audible alert toggle |
+| `debugLogging` | boolean | `false` | `Vianhaku`; enables structured console logging in popup, content script, and background when active |
 | `minIntervalMs` | number | `30000` | Minimum `2000` |
 | `maxIntervalMs` | number | `90000` | Must be at least `minIntervalMs` |
 
@@ -103,7 +104,7 @@ Implement shared pure functions for code reuse and tests:
 - `normalizeRule(value)`: Returns `null` for invalid input; trims `urlPattern`, `selector`, and `listSelector`.
 - `urlMatches(pattern, url)`: Case-insensitive substring match.
 - `shouldMonitorTab(settings, rule, tabUrl)`: True only when settings are enabled, rule is valid, and the top-level tab URL matches.
-- `buildChangeAlertMessage(settings)`: Returns `{ type: "change-detected", notifications, sound }` using normalized settings.
+- `buildChangeAlertMessage(settings)`: Returns `{ type: "change-detected", notifications, sound, debugLogging }` using normalized settings.
 - `looksLikeXPath(selector)`: True when trimmed selector starts with `/`, `(`, or `./`.
 - `isStableIdentifier(value)`: Reject empty values, whitespace, 3+ consecutive digits, `/^f[a-z0-9]+$/i`, `__` prefix, and values containing `buttoncanvas`.
 
@@ -153,6 +154,7 @@ The popup is a compact settings panel with two sections and an autosave notice.
 - Toggle: `Tarkkailu päällä` -> `settings.enabled`
 - Toggle: `Työpöytäilmoitus` -> `settings.notifications`
 - Toggle: `Äänimerkki` -> `settings.sound`
+- Toggle: `Vianhaku` -> `settings.debugLogging`
 - Number input: `Min` under `Päivitysväli (s)` -> `settings.minIntervalMs / 1000`
 - Number input: `Max` under `Päivitysväli (s)` -> `settings.maxIntervalMs / 1000`
 - Read-only value: `Seurattava sivu` -> active tab origin or `Ei asetettu`
@@ -167,6 +169,7 @@ The popup is a compact settings panel with two sections and an autosave notice.
 - On popup open, read the active tab and stored state.
 - Toggles save `settings` on `change`.
 - Interval inputs save `settings` on `change`; clamp min to 2 seconds and max to at least min.
+- The `Vianhaku` toggle saves `settings.debugLogging` on `change` and shows `Tallennettu.` on success.
 - Selector saves `rule` on `change`; `urlPattern` must be derived from the active tab origin at save time and `listSelector` must reset to `""`.
 - Successful autosaves show `Tallennettu.` in the toast.
 - Manually editing selector clears any stored picked `frameId` hint.
@@ -187,8 +190,17 @@ The popup is a compact settings panel with two sections and an autosave notice.
 - Otherwise send `{ type: "test-rule", rule: { urlPattern, selector } }` to the active tab.
 - If a picked frame hint exists, send the message to that `frameId`.
 - Show the response message on success or the response error on failure.
-- If no content script responds, inject `content.js` into all frames and retry.
+- If no content script responds, inject `shared.js` and `content.js` into all frames and retry.
 - If the page still cannot be reached, show `Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.`
+
+### Debug logging
+
+- When `settings.debugLogging` is true, the extension emits grouped console logs for user-visible actions and invisible operational steps from the popup, content script, and background service worker.
+- Each log entry should have a short Finnish headline and structured metadata inside the group.
+- Use `console.info` for ordinary action logs, `console.warn` for recoverable problems, and `console.error` for failures.
+- Popup logs are visible in the popup DevTools console.
+- Content-script logs are visible in the monitored page console.
+- Background logs are visible in the service worker console from `chrome://extensions`.
 
 ### Accessibility
 
@@ -326,7 +338,7 @@ Stable class and identifier filtering must use `isStableIdentifier` rules plus c
 
 ### Messages
 
-- `{ type: "change-detected", notifications, sound }`
+- `{ type: "change-detected", notifications, sound, debugLogging }`
   - If `notifications` is true, create a Chrome desktop notification with title `Vuoropäivittäjä` and message `Uusia vuoroja saattaa olla saatavilla.`
   - If `sound` is true, play alert sound through the offscreen document.
   - Notification and sound attempts must be independent; one failure must not block the other.

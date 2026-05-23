@@ -1,4 +1,5 @@
-const { normalizeSettings, normalizeRule } = globalThis.VuoropaivittajaShared;
+const { normalizeSettings, normalizeRule, createLogger } =
+  globalThis.VuoropaivittajaShared;
 
 const SETTINGS_KEY = "settings";
 const RULE_KEY = "rule";
@@ -10,6 +11,7 @@ const STATUS_DISMISS_MS = 5000;
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
 const soundInput = document.getElementById("sound");
+const debugLoggingInput = document.getElementById("debug-logging");
 const minIntervalInput = document.getElementById("min-interval");
 const maxIntervalInput = document.getElementById("max-interval");
 const targetUrlDisplay = document.getElementById("target-url-display");
@@ -21,15 +23,31 @@ const statusEl = document.getElementById("status");
 let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
+let logger = createLogger("popup", () => debugLoggingInput.checked);
 
 void initialize();
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "monitor-clicked") {
+    logger.info("Päivitä-painike klikattiin.", {
+      event: "monitor-clicked",
+      ok: Boolean(message.ok),
+      message: String(message.message || ""),
+    });
     setStatus(
       String(message.message || "Päivitä-painiketta klikattiin."),
       !message.ok
     );
+    return;
+  }
+
+  if (message?.type === "notification-result") {
+    logger.info("Ilmoitus käsiteltiin.", {
+      event: "notification-result",
+      ok: Boolean(message.ok),
+      message: String(message.message || ""),
+    });
+    setStatus(String(message.message || "Ilmoitus käsitelty."), !message.ok);
   }
 });
 
@@ -44,6 +62,7 @@ async function initialize() {
 
   fillSettings(normalizeSettings(stored[SETTINGS_KEY]));
   fillRule(normalizeRule(stored[RULE_KEY]));
+  logger = createLogger("popup", () => debugLoggingInput.checked);
 
   await loadDraft();
   await loadPickedElement();
@@ -52,6 +71,7 @@ async function initialize() {
 enabledInput.addEventListener("change", autosaveSettings);
 notificationsInput.addEventListener("change", autosaveSettings);
 soundInput.addEventListener("change", autosaveSettings);
+debugLoggingInput.addEventListener("change", autosaveSettings);
 minIntervalInput.addEventListener("change", autosaveSettings);
 maxIntervalInput.addEventListener("change", autosaveSettings);
 selectorInput.addEventListener("change", () => {
@@ -70,28 +90,57 @@ async function autosaveSettings() {
   minIntervalInput.value = String(minSec);
   maxIntervalInput.value = String(maxSec);
 
-  await chrome.storage.local.set({
-    [SETTINGS_KEY]: {
-      enabled: enabledInput.checked,
-      notifications: notificationsInput.checked,
-      sound: soundInput.checked,
-      minIntervalMs: minSec * 1000,
-      maxIntervalMs: maxSec * 1000,
-    },
-  });
-  setStatus("Tallennettu.");
+  const nextSettings = {
+    enabled: enabledInput.checked,
+    notifications: notificationsInput.checked,
+    sound: soundInput.checked,
+    debugLogging: debugLoggingInput.checked,
+    minIntervalMs: minSec * 1000,
+    maxIntervalMs: maxSec * 1000,
+  };
+
+  try {
+    await chrome.storage.local.set({
+      [SETTINGS_KEY]: nextSettings,
+    });
+    logger.info("Asetukset tallennettiin.", {
+      event: "autosave-settings",
+      ...nextSettings,
+    });
+    setStatus("Tallennettu.");
+  } catch (error) {
+    logger.error("Asetusten tallennus epäonnistui.", {
+      event: "autosave-settings-failed",
+      message: String(error?.message || error || ""),
+    });
+    setStatus("Tallennus epäonnistui.", true);
+  }
 }
 
 async function autosaveRule(showToast = true) {
-  await chrome.storage.local.set({
-    [RULE_KEY]: {
-      urlPattern: urlPatternFromTab(),
-      selector: selectorInput.value.trim(),
-      listSelector: "",
-    },
-  });
-  if (showToast) {
-    setStatus("Tallennettu.");
+  const nextRule = {
+    urlPattern: urlPatternFromTab(),
+    selector: selectorInput.value.trim(),
+    listSelector: "",
+  };
+
+  try {
+    await chrome.storage.local.set({
+      [RULE_KEY]: nextRule,
+    });
+    if (showToast) {
+      setStatus("Tallennettu.");
+    }
+    logger.info("Valitsin tallennettiin.", {
+      event: "autosave-rule",
+      ...nextRule,
+    });
+  } catch (error) {
+    logger.error("Valitsimen tallennus epäonnistui.", {
+      event: "autosave-rule-failed",
+      message: String(error?.message || error || ""),
+    });
+    setStatus("Tallennus epäonnistui.", true);
   }
 }
 
@@ -102,6 +151,7 @@ pickElementButton.addEventListener("click", async () => {
   }
 
   try {
+    logger.info("Valitsin käynnistettiin.", { event: "start-picker" });
     await saveDraft();
     await sendToActiveTab({ type: "start-picker" });
     window.close();
@@ -127,6 +177,11 @@ testSelectorButton.addEventListener("click", async () => {
 
   try {
     setStatus("Testataan...");
+    logger.info("Valitsin testataan.", {
+      event: "test-selector",
+      selector,
+      frameId: pickedFrameId,
+    });
     const response = await sendToActiveTab(
       {
         type: "test-rule",
@@ -149,6 +204,7 @@ function fillSettings(settings) {
   enabledInput.checked = settings.enabled;
   notificationsInput.checked = settings.notifications;
   soundInput.checked = settings.sound;
+  debugLoggingInput.checked = settings.debugLogging;
   minIntervalInput.value = String(settings.minIntervalMs / 1000);
   maxIntervalInput.value = String(settings.maxIntervalMs / 1000);
 }
@@ -223,7 +279,7 @@ async function sendToActiveTab(message, options = {}) {
     if (!error?.message?.includes("Receiving end does not exist")) throw error;
     await chrome.scripting.executeScript({
       target: { tabId: activeTab.id, allFrames: true },
-      files: ["content.js"],
+      files: ["shared.js", "content.js"],
     });
     return chrome.tabs.sendMessage(activeTab.id, message, sendOptions);
   }
