@@ -131,27 +131,22 @@ Controls (rendered as labelled toggle switches):
 - **Työpöytäilmoitus** — maps to `notifications`. Send desktop notification on change.
 - **Äänimerkki** — maps to `sound`. Play audio on change.
 
-Interval inputs (two number fields, side by side, values entered and displayed in **seconds**):
+Interval inputs (two number fields labelled **Päivitysväli (s)**, side by side, values entered and displayed in **seconds**):
 
 - **Min** — minimum interval in seconds; stored internally as `minIntervalMs = value × 1000`. Minimum value: 2 s.
 - **Max** — maximum interval in seconds; stored internally as `maxIntervalMs = value × 1000`. Must be ≥ min.
-
-A **Save** button persists the settings and restarts the monitoring cycle with the new values.
-
-Status area: one line below the save button showing success or error feedback.
 
 #### Setup section
 
 Shown below the settings. Allows configuring the monitored page and button.
 
-- **Monitored page** — read-only display of the currently configured `targetUrl`, or `"Not set"` if unconfigured.
-- **Set to current tab** button — sets `urlPattern` to the active tab's origin and `targetUrl` to the full active tab URL. Shows the new URL in the display.
-- **Button selector** — text input; accepts CSS or XPath.
-  - **Pick from page** button — activates the element picker (saves form state, sends `start-picker` to the tab, closes popup).
-  - **Test** button — sends a one-shot click of the current selector to the active tab's content script and shows the result (success or error) in the status area. Useful for verifying the selector before enabling monitoring.
-- **Save setup** button — persists the rule.
+- **Seurattava sivu** — read-only display of the currently configured `targetUrl`, or `"Ei asetettu"` if unconfigured.
+- **Aseta nykyinen sivu** button — sets `urlPattern` to the active tab's origin and `targetUrl` to the full active tab URL. Shows the new URL in the display.
+- **Painikkeen valitsin** — text input; accepts CSS or XPath.
+  - **Valitse sivulta** button — activates the element picker (saves form state, sends `start-picker` to the tab, closes popup).
+  - **Testaa** button — sends a one-shot click of the current selector to the active tab's content script and shows the result (success or error) in the status area. Useful for verifying the selector before enabling monitoring.
 
-If setup is saved and valid, and `enabled` is on, monitoring starts automatically.
+A single **Tallenna** button at the bottom persists both settings and setup. Status area shows **Tallennettu** on success or an error message in Finnish.
 
 ---
 
@@ -162,7 +157,7 @@ If setup is saved and valid, and `enabled` is on, monitoring starts automaticall
 #### Acceptance criteria
 
 - Activating the picker closes the popup and saves form state as a draft.
-- The content script overlays the page: a highlight follows the pointer over button-like elements; a fixed hint banner reads `"Vuoropäivittäjä: click the target element, or press Escape to cancel"`.
+- The content script overlays the page: a highlight follows the pointer over button-like elements; a fixed hint banner reads `"Vuoropäivittäjä: klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi"`.
 - Only button-like elements are selectable: `button`, `input[type="button"]`, `input[type="submit"]`, `input[type="reset"]`, `[role="button"]`.
 - On click: builds a selector, saves `{ selector, url, timestamp }` under `lastPickedElement`, exits picker.
 - `Escape` cancels without saving.
