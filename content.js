@@ -74,6 +74,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const session = monitoringSession;
 
     if (settings.enabled && rule && urlMatches(rule.urlPattern, location.href)) {
+      void ensureListSelector(rule);
       void startMonitoring(settings, rule, session);
     }
   }
@@ -94,6 +95,48 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         fireChangeNotification(settings);
       }
     }
+  }
+
+  async function ensureListSelector(rule) {
+    if (rule.listSelector) return;
+    const listSelector = detectListSelector(rule.selector);
+    if (!listSelector) return;
+    await chrome.storage.local.set({ rule: { ...rule, listSelector } });
+  }
+
+  function detectListSelector(selector) {
+    const button = findElementInPage(selector);
+    if (!button) return "";
+
+    let ancestor = button.parentElement;
+    while (ancestor && ancestor !== document.documentElement) {
+      const list = ancestor.querySelector('[role="list"], [role="grid"]');
+      if (list && !button.contains(list)) {
+        return buildSelectorForElement(list);
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return "";
+  }
+
+  function findElementInPage(selector) {
+    if (looksLikeXPath(selector)) {
+      return queryXPath(selector);
+    }
+
+    const visited = new Set();
+    const queue = [document];
+    while (queue.length) {
+      const root = queue.shift();
+      if (!root || visited.has(root)) continue;
+      visited.add(root);
+      const el = root.querySelector(selector);
+      if (el) return el;
+      for (const host of root.querySelectorAll("*")) {
+        if (host.shadowRoot) queue.push(host.shadowRoot);
+      }
+    }
+    return null;
   }
 
   function takeSnapshot(listSelector) {
@@ -606,6 +649,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       "data-testid",
       "data-test",
       "data-automation-id",
+      "data-control-name",
       "aria-label",
       "name",
       "title",
