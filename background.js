@@ -5,7 +5,7 @@ const { normalizeSettings, normalizeRule, urlMatches } =
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "change-detected") {
-    void chrome.notifications.create("vuoro-change", {
+    void chrome.notifications.create("vuoropaivittaja-change", {
       type: "basic",
       iconUrl: "icon.png",
       title: "Vuoropäivittäjä",
