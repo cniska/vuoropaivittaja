@@ -1,10 +1,15 @@
-# Auto Clicker — Feature Specification
+# Vuoropäivittäjä — Feature Specification
 
 ## Overview
 
-Auto Clicker is a Chrome extension that automatically clicks a configured button on a matching page at a set interval. Users define rules that pair a URL pattern with an element selector, and the extension clicks that element repeatedly on any tab whose URL matches. Enabled rules also keep their target page open: if the tab is closed, the extension reopens it automatically.
+Vuoropäivittäjä is a Chrome extension that automatically clicks a configured button on a matching page at a set interval. Users define rules that pair a URL pattern with an element selector, and the extension clicks that element repeatedly on any tab whose URL matches. Enabled rules also keep their target page open: if the tab is closed, the extension reopens it automatically.
 
-The primary use case is repeatedly clicking a "refresh" or "check availability" button on a page the user wants to monitor without manual interaction.
+The primary use case is repeatedly clicking a "refresh" or "check availability" button on a booking or scheduling page — for example, checking for newly available appointment slots without manual interaction.
+
+### Out of scope (future)
+
+- Detecting or listing newly available slots found on the page.
+- Sound or desktop notifications when new content appears.
 
 ---
 
@@ -84,7 +89,7 @@ A rule with an empty `urlPattern` or empty `selector` is considered invalid and 
 
 ### 3. Popup UI
 
-**As a user**, I want a popup where I can create, edit, test, and delete rules, so I can manage automation without leaving the browser.
+**As a user**, I want a popup where I can create, edit, and delete rules, so I can manage automation without leaving the browser.
 
 #### Layout
 
@@ -114,7 +119,6 @@ Hidden fields: `rule-id` (UUID of the rule being edited, empty for new), `target
 
 Actions:
 - **Save rule** — validates that URL pattern and selector are non-empty; creates a new rule or updates the existing one (matched by `rule-id`); persists to storage; clears form.
-- **Test on current tab** — sends the current form values to the background for immediate click attempt on the active tab; shows result in the status area.
 - **Clear form** — resets all fields to defaults; removes any saved draft from storage.
 - **Pick from page** — saves current form state as a draft to storage, sends a `start-picker` message to the active tab's content script, then closes the popup.
 
@@ -126,13 +130,12 @@ Status area: a line below the form showing success (green) or error (red) messag
 - Each rule renders a card with:
   - Rule name (fallback: `"Unnamed rule"`).
   - `"URL contains: <urlPattern>"`.
-  - `"Selector: <selector>"` (appends `" (activates tab)"` when `activateTab` is true).
+  - `"Selector: <selector>"`.
   - `"Every <formatted interval>"` — formatted as ms, seconds, or minutes (trimmed decimals).
   - Enabled/Disabled badge.
   - Selector kind chip: `"CSS"` or `"XPath"`.
-  - Behavior chip: `"Reopens closed tab"` if `targetUrl` is set; `"Activates before click"` if `activateTab`; otherwise `"Runs on current page"`.
+  - Behavior chip: `"Reopens closed tab"` if `targetUrl` is set; `"Activates before click"` if `activateTab`; otherwise `"Runs silently"`.
   - **Edit** — loads the rule into the form.
-  - **Test** — same as "Test on current tab" for that rule.
   - **Delete** — removes the rule from storage immediately.
 
 ---
@@ -145,7 +148,7 @@ Status area: a line below the form showing success (green) or error (red) messag
 
 - Activating the picker closes the popup and saves form state as a draft.
 - The content script overlays the page with a semi-transparent highlight that follows the pointer, showing the currently hovered target.
-- A fixed hint banner reads: `"Auto Clicker: click the target element, or press Escape to cancel"`.
+- A fixed hint banner reads: `"Vuoropäivittäjä: click the target element, or press Escape to cancel"`.
 - Only button-like elements are selectable: `button`, `input[type="button"]`, `input[type="submit"]`, `input[type="reset"]`, `[role="button"]`. The picker walks up the composed event path to find the nearest such ancestor.
 - Clicking a target:
   1. Prevents default and stops propagation.
@@ -185,20 +188,6 @@ When the popup opens after a pick:
 2. The `lastPickedElement` value is read: its `selector` fills the selector field; its `url` sets `targetUrl` and fills `urlPattern` with the URL's origin.
 3. Both storage keys are cleared.
 4. A status message confirms the pick.
-
----
-
-### 5. Rule testing
-
-**As a user**, I want to trigger a rule immediately on the current tab to verify it works before saving, so I don't have to wait for the next interval.
-
-#### Acceptance criteria
-
-- Testing routes through the background service worker, which injects a test function into all frames of the target tab.
-- The test function checks each frame's URL against the rule's pattern. The first frame whose URL matches and whose selector resolves to a visible element is clicked. The click uses the same full pointer/mouse event sequence as auto-clicking.
-- Result priority: clicked frame > URL-matched but selector-missing frame > no match.
-- The popup displays the result message (success or error) in the status area.
-- If the content script is not loaded in the target tab, the popup falls back to injecting it via `chrome.scripting.executeScript` before retrying the message.
 
 ---
 
