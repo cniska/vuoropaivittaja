@@ -8,73 +8,60 @@
   </head>
   <body>
     <main class="app">
-      <section class="hero panel">
-        <div class="hero-mark">AC</div>
-        <div class="hero-copy">
-          <p class="eyebrow">Auto Clicker</p>
-          <h1>Keep One Page Fresh</h1>
-          <p class="hero-text">Save a button rule, test it quickly, and let the extension reopen the page if the tab disappears.</p>
-        </div>
-        <div class="hero-actions">
-          <button id="use-current-site" type="button" class="secondary-button">Use current site</button>
-        </div>
-        <p id="current-site" class="current-site site-pill">Detecting current tab...</p>
-      </section>
 
-      <section class="panel form-panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">New Rule</p>
-            <h2>Target Setup</h2>
-          </div>
-          <p class="section-note">XPath works too. If the picker sees duplicates, it can fall back automatically.</p>
+      <header class="header">
+        <span class="header-title">Auto Clicker</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="current-site" class="current-site">Detecting tab…</span>
+          <button id="use-current-site" type="button" class="secondary-button">Use this site</button>
         </div>
+      </header>
+
+      <section class="section">
+        <p class="section-title" id="form-heading">New rule</p>
         <form id="rule-form" class="rule-form">
           <input id="rule-id" type="hidden">
           <input id="target-url" type="hidden">
 
           <div class="field-row">
-            <label class="field">
-              <span>Rule name</span>
+            <div class="field">
+              <label for="name">Rule name</label>
               <input id="name" name="name" type="text" placeholder="Free slots refresh">
-            </label>
-
-            <label class="field">
-              <span>URL contains</span>
+            </div>
+            <div class="field">
+              <label for="url-pattern">URL contains</label>
               <input id="url-pattern" name="urlPattern" type="text" placeholder="example.com/appointments">
-            </label>
+            </div>
           </div>
 
-          <label class="field">
-            <span>Button selector</span>
+          <div class="field">
+            <label for="selector">Button selector</label>
             <input id="selector" name="selector" type="text" placeholder='button[data-test="refresh"]' required>
             <div class="field-actions">
               <button id="pick-element" type="button" class="secondary-button">Pick from page</button>
-              <small class="field-hint">Pick a button and I’ll try a stable CSS selector first, then XPath if needed.</small>
+              <span class="field-hint">CSS selector or XPath. Use the picker to auto-detect.</span>
             </div>
-          </label>
+          </div>
 
-          <div class="field-row compact-row">
-            <label class="field">
-              <span>Interval in milliseconds</span>
+          <div class="field-row">
+            <div class="field">
+              <label for="interval">Interval (ms)</label>
               <input id="interval" name="interval" type="number" min="500" step="100" value="10000" required>
-              <small class="field-hint">Default 10000 ms. Minimum 500 ms.</small>
-            </label>
-
-            <div class="toggle-stack">
-              <label class="checkbox feature-toggle">
+              <span class="field-hint">Min 500 ms · Default 10 000 ms</span>
+            </div>
+            <div class="toggles">
+              <label class="toggle">
                 <input id="activate-tab" name="activateTab" type="checkbox">
-                <span>
-                  <strong>Activate this tab</strong>
-                  <small>Bring the page to the front before clicking.</small>
+                <span class="toggle-label">
+                  <strong>Activate tab</strong>
+                  <small>Bring page to front before clicking</small>
                 </span>
               </label>
-
-              <label class="checkbox feature-toggle">
+              <label class="toggle">
                 <input id="enabled" name="enabled" type="checkbox" checked>
-                <span>
-                  <strong>Enable this rule</strong>
-                  <small>Enabled rules can reopen their saved page if its tab gets closed.</small>
+                <span class="toggle-label">
+                  <strong>Enable rule</strong>
+                  <small>Reopen tab if it gets closed</small>
                 </span>
               </label>
             </div>
@@ -83,42 +70,32 @@
           <div class="actions">
             <button type="submit" class="primary-button">Save rule</button>
             <button id="test-rule" type="button" class="secondary-button">Test on current tab</button>
-            <button id="reset-form" type="button" class="ghost-button">Clear form</button>
+            <button id="reset-form" type="button" class="ghost-button">Clear</button>
           </div>
         </form>
 
         <p id="status" class="status" role="status"></p>
       </section>
 
-      <section class="panel list-panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Saved rules</p>
-            <h2>Active list</h2>
-          </div>
-          <p class="section-note">Keep selectors simple when you can. Use XPath when the page has duplicate buttons.</p>
-        </div>
-
-        <div id="empty-state" class="empty-state">
-          No rules yet. Add one above for the current site.
-        </div>
+      <section class="section">
+        <p class="section-title">Saved rules</p>
+        <div id="empty-state" class="empty-state">No rules yet.</div>
         <div id="rules-list" class="rules-list"></div>
       </section>
+
     </main>
 
     <template id="rule-item-template">
       <article class="rule-card">
         <div class="rule-card-header">
-          <div>
-            <h3 class="rule-title"></h3>
-            <p class="rule-url"></p>
-          </div>
+          <h3 class="rule-title"></h3>
           <span class="rule-badge"></span>
         </div>
         <div class="rule-meta">
           <span class="meta-chip rule-selector-kind"></span>
           <span class="meta-chip rule-behavior"></span>
         </div>
+        <p class="rule-url"></p>
         <p class="rule-selector"></p>
         <p class="rule-interval"></p>
         <div class="rule-actions">

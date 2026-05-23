@@ -88,17 +88,17 @@ A rule with an empty `urlPattern` or empty `selector` is considered invalid and 
 
 #### Layout
 
-The popup is a single vertical page (min-width 460 px) with three panels:
+The popup is a single vertical page (min-width 400 px) with three areas:
 
-1. **Hero panel** — extension identity, current tab URL, and a "Use current site" shortcut.
-2. **Rule form panel** — fields to create or edit a rule.
-3. **Rules list panel** — cards for all saved rules.
+1. **Header** — extension name, current tab URL, and a "Use this site" shortcut.
+2. **Rule form section** — fields to create or edit a rule.
+3. **Rules list section** — cards for all saved rules.
 
-#### Hero panel
+#### Header
 
-- Displays the full URL of the currently active tab as `Current tab: <url>`.
-- If no active tab URL is detected: `"Open the site you want to automate, then reopen this popup."`.
-- "Use current site" button fills the URL pattern field with the origin of the active tab's URL (scheme + host + port) and sets the hidden `targetUrl` field to the full tab URL.
+- Displays the truncated URL of the currently active tab.
+- If no active tab URL is detected: `"Detecting tab…"`.
+- "Use this site" button fills the URL pattern field with the origin of the active tab's URL (scheme + host + port) and sets the hidden `targetUrl` field to the full tab URL.
 
 #### Rule form
 
