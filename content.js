@@ -3,12 +3,8 @@ if (!globalThis.__autoClickerLoaded) {
 
   const STORAGE_KEY = "rules";
   const PICK_RESULT_KEY = "lastPickedElement";
-  const {
-    normalizeRules,
-    urlMatches,
-    looksLikeXPath,
-    isStableIdentifier
-  } = globalThis.AutoClickerShared;
+  const { normalizeRules, urlMatches, looksLikeXPath, isStableIdentifier } =
+    globalThis.AutoClickerShared;
 
   const activeTimers = new Map();
   let lastUrl = location.href;
@@ -27,20 +23,29 @@ if (!globalThis.__autoClickerLoaded) {
       startPicker();
       sendResponse({
         ok: true,
-        message: "Click the target element on the page. Press Escape to cancel."
+        message:
+          "Click the target element on the page. Press Escape to cancel.",
       });
       return false;
     }
 
     if (message?.type === "test-rule") {
-      const normalizedRule = normalizeRules([{ ...message.rule, id: "preview", enabled: true }])[0];
+      const normalizedRule = normalizeRules([
+        { ...message.rule, id: "preview", enabled: true },
+      ])[0];
       if (!normalizedRule) {
-        sendResponse({ ok: false, error: "Please enter a valid URL pattern and selector first." });
+        sendResponse({
+          ok: false,
+          error: "Please enter a valid URL pattern and selector first.",
+        });
         return false;
       }
 
       if (!urlMatches(normalizedRule.urlPattern, location.href)) {
-        sendResponse({ ok: false, error: "The current tab URL does not match this rule." });
+        sendResponse({
+          ok: false,
+          error: "The current tab URL does not match this rule.",
+        });
         return false;
       }
 
@@ -160,7 +165,8 @@ if (!globalThis.__autoClickerLoaded) {
 
     const hint = document.createElement("div");
     hint.dataset.autoClickerOverlay = "true";
-    hint.textContent = "Auto Clicker: click the target element, or press Escape to cancel";
+    hint.textContent =
+      "Auto Clicker: click the target element, or press Escape to cancel";
     hint.style.position = "fixed";
     hint.style.top = "16px";
     hint.style.right = "16px";
@@ -196,8 +202,8 @@ if (!globalThis.__autoClickerLoaded) {
         [PICK_RESULT_KEY]: {
           selector,
           url: location.href,
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       });
       stopPicker();
     };
@@ -233,7 +239,7 @@ if (!globalThis.__autoClickerLoaded) {
         document.removeEventListener("keydown", handleKeyDown, true);
         overlay.remove();
         hint.remove();
-      }
+      },
     };
   }
 
@@ -247,14 +253,20 @@ if (!globalThis.__autoClickerLoaded) {
   }
 
   function getSelectableElement(event) {
-    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    const path =
+      typeof event.composedPath === "function" ? event.composedPath() : [];
     for (const item of path) {
-      if (item instanceof Element && !item.closest("[data-auto-clicker-overlay='true']")) {
+      if (
+        item instanceof Element &&
+        !item.closest("[data-auto-clicker-overlay='true']")
+      ) {
         return findPreferredTarget(item);
       }
     }
 
-    return event.target instanceof Element ? findPreferredTarget(event.target) : null;
+    return event.target instanceof Element
+      ? findPreferredTarget(event.target)
+      : null;
   }
 
   function updateOverlay(overlay, target) {
@@ -273,8 +285,9 @@ if (!globalThis.__autoClickerLoaded) {
 
   function findPreferredTarget(element) {
     return (
-      element.closest('button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"]')
-        || null
+      element.closest(
+        'button, input[type="button"], input[type="submit"], input[type="reset"], [role="button"]'
+      ) || null
     );
   }
 
@@ -305,7 +318,7 @@ if (!globalThis.__autoClickerLoaded) {
 
       const baseXPath = `//${tagName}[@${attribute}=${toXPathLiteral(value)}]`;
       const indexedXPath = buildIndexedXPath(baseXPath, element);
-      if (indexedXPath && indexedXPath.startsWith("(")) {
+      if (indexedXPath?.startsWith("(")) {
         return indexedXPath;
       }
     }
@@ -315,10 +328,9 @@ if (!globalThis.__autoClickerLoaded) {
       return null;
     }
 
-    const baseXPath =
-      `//${tagName}[contains(concat(' ', normalize-space(@class), ' '), ${toXPathLiteral(` ${stableClass} `)})]`;
+    const baseXPath = `//${tagName}[contains(concat(' ', normalize-space(@class), ' '), ${toXPathLiteral(` ${stableClass} `)})]`;
     const indexedXPath = buildIndexedXPath(baseXPath, element);
-    return indexedXPath && indexedXPath.startsWith("(") ? indexedXPath : null;
+    return indexedXPath?.startsWith("(") ? indexedXPath : null;
   }
 
   function buildSelectorCandidates(element) {
@@ -355,14 +367,20 @@ if (!globalThis.__autoClickerLoaded) {
     for (const attribute of preferredAttributes()) {
       const value = element.getAttribute(attribute);
       if (value) {
-        selectors.push(`${tagName}[${attribute}="${escapeAttributeValue(value)}"]`);
+        selectors.push(
+          `${tagName}[${attribute}="${escapeAttributeValue(value)}"]`
+        );
       }
     }
 
     const classNames = getStableClassNames(element);
     if (classNames.length) {
-      selectors.push(`${tagName}.${classNames[0] ? CSS.escape(classNames[0]) : ""}`);
-      selectors.push(`${tagName}.${classNames.map((name) => CSS.escape(name)).join(".")}`);
+      selectors.push(
+        `${tagName}.${classNames[0] ? CSS.escape(classNames[0]) : ""}`
+      );
+      selectors.push(
+        `${tagName}.${classNames.map((name) => CSS.escape(name)).join(".")}`
+      );
     }
 
     selectors.push(tagName);
@@ -418,7 +436,11 @@ if (!globalThis.__autoClickerLoaded) {
     const segments = [];
     let current = element;
 
-    while (current && current.nodeType === Node.ELEMENT_NODE && current !== document.documentElement) {
+    while (
+      current &&
+      current.nodeType === Node.ELEMENT_NODE &&
+      current !== document.documentElement
+    ) {
       segments.unshift(buildPathSegment(current));
       selectors.push(segments.join(" > "));
       current = current.parentElement;
@@ -481,8 +503,7 @@ if (!globalThis.__autoClickerLoaded) {
 
     const stableClass = getStableClassNames(element)[0];
     if (stableClass) {
-      const baseXPath =
-        `//${tagName}[contains(concat(' ', normalize-space(@class), ' '), ${toXPathLiteral(` ${stableClass} `)})]`;
+      const baseXPath = `//${tagName}[contains(concat(' ', normalize-space(@class), ' '), ${toXPathLiteral(` ${stableClass} `)})]`;
       const indexedXPath = buildIndexedXPath(baseXPath, element);
       if (indexedXPath) {
         return indexedXPath;
@@ -504,7 +525,9 @@ if (!globalThis.__autoClickerLoaded) {
 
       for (let index = 0; index < result.snapshotLength; index += 1) {
         if (result.snapshotItem(index) === element) {
-          return result.snapshotLength === 1 ? baseXPath : `(${baseXPath})[${index + 1}]`;
+          return result.snapshotLength === 1
+            ? baseXPath
+            : `(${baseXPath})[${index + 1}]`;
         }
       }
     } catch {
@@ -522,9 +545,12 @@ if (!globalThis.__autoClickerLoaded) {
       const tagName = current.localName;
       const parent = current.parentElement;
       const siblings = parent
-        ? Array.from(parent.children).filter((child) => child.localName === tagName)
+        ? Array.from(parent.children).filter(
+            (child) => child.localName === tagName
+          )
         : [];
-      const index = siblings.length > 1 ? `[${siblings.indexOf(current) + 1}]` : "";
+      const index =
+        siblings.length > 1 ? `[${siblings.indexOf(current) + 1}]` : "";
       segments.unshift(`${tagName}${index}`);
       current = parent;
     }
@@ -554,17 +580,18 @@ if (!globalThis.__autoClickerLoaded) {
       "name",
       "title",
       "type",
-      "role"
+      "role",
     ];
   }
 
   function getStableClassNames(element) {
-    return Array.from(element.classList).filter((className) =>
-      /^[a-z][a-z0-9_-]{1,30}$/i.test(className) &&
-      !/\d{3,}/.test(className) &&
-      !/^f[a-z0-9]+$/i.test(className) &&
-      !/^_{2,}/.test(className) &&
-      !/buttoncanvas/i.test(className)
+    return Array.from(element.classList).filter(
+      (className) =>
+        /^[a-z][a-z0-9_-]{1,30}$/i.test(className) &&
+        !/\d{3,}/.test(className) &&
+        !/^f[a-z0-9]+$/i.test(className) &&
+        !/^_{2,}/.test(className) &&
+        !/buttoncanvas/i.test(className)
     );
   }
 
@@ -598,14 +625,14 @@ if (!globalThis.__autoClickerLoaded) {
       if (!xpathElement) {
         return {
           clicked: false,
-          message: "XPath did not match any element on the page."
+          message: "XPath did not match any element on the page.",
         };
       }
 
       triggerElementInteraction(xpathElement);
       return {
         clicked: true,
-        message: "Clicked the matching XPath element."
+        message: "Clicked the matching XPath element.",
       };
     }
 
@@ -625,7 +652,7 @@ if (!globalThis.__autoClickerLoaded) {
         triggerElementInteraction(element);
         return {
           clicked: true,
-          message: "Clicked the matching element."
+          message: "Clicked the matching element.",
         };
       }
 
@@ -639,7 +666,7 @@ if (!globalThis.__autoClickerLoaded) {
 
     return {
       clicked: false,
-      message: "Selector was not found on the page."
+      message: "Selector was not found on the page.",
     };
   }
 
@@ -652,7 +679,9 @@ if (!globalThis.__autoClickerLoaded) {
         XPathResult.FIRST_ORDERED_NODE_TYPE,
         null
       );
-      return result.singleNodeValue instanceof Element ? result.singleNodeValue : null;
+      return result.singleNodeValue instanceof Element
+        ? result.singleNodeValue
+        : null;
     } catch {
       return null;
     }
@@ -662,7 +691,7 @@ if (!globalThis.__autoClickerLoaded) {
     element.scrollIntoView({
       block: "center",
       inline: "center",
-      behavior: "instant"
+      behavior: "instant",
     });
 
     if (typeof element.focus === "function") {
@@ -680,28 +709,28 @@ if (!globalThis.__autoClickerLoaded) {
       button: 0,
       buttons: 1,
       clientX,
-      clientY
+      clientY,
     };
 
     dispatchIfSupported(element, "pointerover", PointerEvent, {
       ...baseOptions,
       pointerId: 1,
       pointerType: "mouse",
-      isPrimary: true
+      isPrimary: true,
     });
     dispatchIfSupported(element, "mouseover", MouseEvent, baseOptions);
     dispatchIfSupported(element, "pointerdown", PointerEvent, {
       ...baseOptions,
       pointerId: 1,
       pointerType: "mouse",
-      isPrimary: true
+      isPrimary: true,
     });
     dispatchIfSupported(element, "mousedown", MouseEvent, baseOptions);
     dispatchIfSupported(element, "pointerup", PointerEvent, {
       ...baseOptions,
       pointerId: 1,
       pointerType: "mouse",
-      isPrimary: true
+      isPrimary: true,
     });
     dispatchIfSupported(element, "mouseup", MouseEvent, baseOptions);
     dispatchIfSupported(element, "click", MouseEvent, baseOptions);
@@ -721,7 +750,9 @@ if (!globalThis.__autoClickerLoaded) {
 
   async function requestTabActivation() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: "activate-sender-tab" });
+      const response = await chrome.runtime.sendMessage({
+        type: "activate-sender-tab",
+      });
       return Boolean(response?.ok);
     } catch {
       return false;

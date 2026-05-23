@@ -17,12 +17,18 @@
   }
 
   function urlMatches(pattern, url) {
-    return String(url || "").toLowerCase().includes(String(pattern || "").toLowerCase());
+    return String(url || "")
+      .toLowerCase()
+      .includes(String(pattern || "").toLowerCase());
   }
 
   function looksLikeXPath(selector) {
     const trimmed = String(selector || "").trim();
-    return trimmed.startsWith("/") || trimmed.startsWith("(") || trimmed.startsWith("./");
+    return (
+      trimmed.startsWith("/") ||
+      trimmed.startsWith("(") ||
+      trimmed.startsWith("./")
+    );
   }
 
   function isStableIdentifier(value) {
@@ -31,11 +37,13 @@
       return false;
     }
 
-    return !/\s/.test(text) &&
+    return (
+      !/\s/.test(text) &&
       !/\d{3,}/.test(text) &&
       !/^f[a-z0-9]+$/i.test(text) &&
       !/^_{2,}/.test(text) &&
-      !/buttoncanvas/i.test(text);
+      !/buttoncanvas/i.test(text)
+    );
   }
 
   function normalizeRule(rule, options = {}) {
@@ -44,7 +52,8 @@
     }
 
     const requireId = Boolean(options.requireId);
-    const createId = typeof options.createId === "function" ? options.createId : null;
+    const createId =
+      typeof options.createId === "function" ? options.createId : null;
     const rawId = String(rule.id || "").trim();
     const id = rawId || (!requireId && createId ? String(createId()) : "");
 
@@ -56,7 +65,7 @@
       targetUrl: String(rule.targetUrl || "").trim(),
       activateTab: Boolean(rule.activateTab),
       intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
-      enabled: Boolean(rule.enabled)
+      enabled: Boolean(rule.enabled),
     };
 
     if (!normalizedRule.urlPattern || !normalizedRule.selector) {
@@ -75,9 +84,7 @@
       return [];
     }
 
-    return value
-      .map((rule) => normalizeRule(rule, options))
-      .filter(Boolean);
+    return value.map((rule) => normalizeRule(rule, options)).filter(Boolean);
   }
 
   const api = {
@@ -88,7 +95,7 @@
     looksLikeXPath,
     isStableIdentifier,
     normalizeRule,
-    normalizeRules
+    normalizeRules,
   };
 
   globalScope.AutoClickerShared = api;

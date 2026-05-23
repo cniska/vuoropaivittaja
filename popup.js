@@ -1,12 +1,8 @@
 const STORAGE_KEY = "rules";
 const PICK_RESULT_KEY = "lastPickedElement";
 const DRAFT_RULE_KEY = "draftRule";
-const {
-  DEFAULT_INTERVAL_MS,
-  normalizeRules,
-  clampIntervalMs,
-  looksLikeXPath
-} = globalThis.AutoClickerShared;
+const { DEFAULT_INTERVAL_MS, normalizeRules, clampIntervalMs, looksLikeXPath } =
+  globalThis.AutoClickerShared;
 
 const form = document.getElementById("rule-form");
 const ruleIdInput = document.getElementById("rule-id");
@@ -42,7 +38,7 @@ async function initialize() {
 
   const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
   rules = normalizeRules(stored[STORAGE_KEY], {
-    createId: () => crypto.randomUUID()
+    createId: () => crypto.randomUUID(),
   });
   renderRules();
 
@@ -74,7 +70,7 @@ form.addEventListener("submit", async (event) => {
     targetUrl: getTargetUrlFromForm(),
     activateTab: activateTabInput.checked,
     intervalMs,
-    enabled: enabledInput.checked
+    enabled: enabledInput.checked,
   };
 
   const existingIndex = rules.findIndex((rule) => rule.id === id);
@@ -120,18 +116,24 @@ testRuleButton.addEventListener("click", async () => {
     selector: selectorInput.value.trim(),
     activateTab: activateTabInput.checked,
     intervalMs: clampIntervalMs(intervalInput.value),
-    enabled: enabledInput.checked
+    enabled: enabledInput.checked,
   };
 
   try {
     const response = await chrome.runtime.sendMessage({
       type: "test-rule-in-tab",
       tabId: activeTab.id,
-      rule
+      rule,
     });
-    setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+    setStatus(
+      response?.ok ? response.message : response?.error || "Test failed.",
+      !response?.ok
+    );
   } catch {
-    setStatus("Could not contact the page. Refresh it once and try again.", true);
+    setStatus(
+      "Could not contact the page. Refresh it once and try again.",
+      true
+    );
   }
 });
 
@@ -145,12 +147,16 @@ pickElementButton.addEventListener("click", async () => {
     await saveDraftRule();
     const response = await sendToActiveTab({ type: "start-picker" });
     setStatus(
-      response?.message || "Click the target element on the page, then reopen this popup.",
+      response?.message ||
+        "Click the target element on the page, then reopen this popup.",
       !response?.ok
     );
     window.close();
   } catch {
-    setStatus("Could not start picker. Refresh the page once and try again.", true);
+    setStatus(
+      "Could not start picker. Refresh the page once and try again.",
+      true
+    );
   }
 });
 
@@ -200,11 +206,17 @@ function renderRules() {
         const response = await chrome.runtime.sendMessage({
           type: "test-rule-in-tab",
           tabId: activeTab.id,
-          rule
+          rule,
         });
-        setStatus(response?.ok ? response.message : response?.error || "Test failed.", !response?.ok);
+        setStatus(
+          response?.ok ? response.message : response?.error || "Test failed.",
+          !response?.ok
+        );
       } catch {
-        setStatus("Could not contact the page. Refresh it once and try again.", true);
+        setStatus(
+          "Could not contact the page. Refresh it once and try again.",
+          true
+        );
       }
     });
 
@@ -242,7 +254,9 @@ function clearForm() {
   activateTabInput.checked = false;
   intervalInput.value = String(DEFAULT_INTERVAL_MS);
   enabledInput.checked = true;
-  urlPatternInput.value = activeTab?.url ? defaultPatternFor(activeTab.url) : "";
+  urlPatternInput.value = activeTab?.url
+    ? defaultPatternFor(activeTab.url)
+    : "";
 }
 
 function getDraftRuleFromForm() {
@@ -254,7 +268,7 @@ function getDraftRuleFromForm() {
     selector: selectorInput.value.trim(),
     activateTab: activateTabInput.checked,
     intervalMs: clampIntervalMs(intervalInput.value),
-    enabled: enabledInput.checked
+    enabled: enabledInput.checked,
   };
 }
 
@@ -283,7 +297,9 @@ function formatInterval(intervalMs) {
 }
 
 function trimNumber(value) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function defaultPatternFor(url) {
@@ -321,7 +337,7 @@ async function loadPickedElement() {
 
 async function saveDraftRule() {
   await chrome.storage.local.set({
-    [DRAFT_RULE_KEY]: getDraftRuleFromForm()
+    [DRAFT_RULE_KEY]: getDraftRuleFromForm(),
   });
 }
 
@@ -340,7 +356,7 @@ async function loadDraftRule() {
     selector: String(draft.selector || "").trim(),
     activateTab: Boolean(draft.activateTab),
     intervalMs: clampIntervalMs(draft.intervalMs, draft.intervalMinutes),
-    enabled: Boolean(draft.enabled)
+    enabled: Boolean(draft.enabled),
   });
 
   await clearDraftRule();
@@ -366,7 +382,7 @@ async function sendToActiveTab(message) {
 
     await chrome.scripting.executeScript({
       target: { tabId: activeTab.id, allFrames: true },
-      files: ["content.js"]
+      files: ["content.js"],
     });
 
     return chrome.tabs.sendMessage(activeTab.id, message);

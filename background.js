@@ -61,15 +61,17 @@ async function testRuleInTab(tabId, rule) {
   const injectionResults = await chrome.scripting.executeScript({
     target: { tabId, allFrames: true },
     func: testRuleInFrame,
-    args: [rule]
+    args: [rule],
   });
 
-  const frameResults = injectionResults.map((entry) => entry.result).filter(Boolean);
+  const frameResults = injectionResults
+    .map((entry) => entry.result)
+    .filter(Boolean);
   const clickedFrame = frameResults.find((entry) => entry.clicked);
   if (clickedFrame) {
     return {
       ok: true,
-      message: `Clicked the matching element in ${clickedFrame.frameUrl}.`
+      message: `Clicked the matching element in ${clickedFrame.frameUrl}.`,
     };
   }
 
@@ -77,13 +79,15 @@ async function testRuleInTab(tabId, rule) {
   if (matchedFrame) {
     return {
       ok: false,
-      error: matchedFrame.message || "The selector was not found in the matching frame."
+      error:
+        matchedFrame.message ||
+        "The selector was not found in the matching frame.",
     };
   }
 
   return {
     ok: false,
-    error: "This rule does not match the current page or embedded app frame."
+    error: "This rule does not match the current page or embedded app frame.",
   };
 }
 
@@ -97,8 +101,9 @@ async function ensureOpenTabsForEnabledRules() {
 
   const openTabs = await chrome.tabs.query({});
   for (const rule of enabledRules) {
-    const hasMatchingTab = openTabs.some((tab) =>
-      typeof tab.url === "string" && urlMatches(rule.urlPattern, tab.url)
+    const hasMatchingTab = openTabs.some(
+      (tab) =>
+        typeof tab.url === "string" && urlMatches(rule.urlPattern, tab.url)
     );
 
     if (hasMatchingTab) {
@@ -107,14 +112,16 @@ async function ensureOpenTabsForEnabledRules() {
 
     const createdTab = await chrome.tabs.create({
       url: rule.targetUrl,
-      active: true
+      active: true,
     });
     openTabs.push(createdTab);
   }
 }
 
 function testRuleInFrame(rule) {
-  const urlPattern = String(rule?.urlPattern || "").trim().toLowerCase();
+  const urlPattern = String(rule?.urlPattern || "")
+    .trim()
+    .toLowerCase();
   const selector = String(rule?.selector || "").trim();
 
   if (!urlPattern || !selector) {
@@ -122,7 +129,7 @@ function testRuleInFrame(rule) {
       frameUrl: location.href,
       urlMatched: false,
       clicked: false,
-      message: "URL pattern and selector are required."
+      message: "URL pattern and selector are required.",
     };
   }
 
@@ -131,7 +138,7 @@ function testRuleInFrame(rule) {
     return {
       frameUrl: location.href,
       urlMatched: false,
-      clicked: false
+      clicked: false,
     };
   }
 
@@ -141,13 +148,13 @@ function testRuleInFrame(rule) {
       frameUrl: location.href,
       urlMatched: true,
       clicked: false,
-      message: result.message || `Selector not found in ${location.href}.`
+      message: result.message || `Selector not found in ${location.href}.`,
     };
   }
 
   return {
     frameUrl: location.href,
     urlMatched: true,
-    clicked: true
+    clicked: true,
   };
 }
