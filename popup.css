@@ -1,49 +1,61 @@
 :root {
   --bg: #ffffff;
-  --bg-subtle: #f9fafb;
-  --border: #e5e7eb;
-  --text: #111827;
-  --muted: #6b7280;
+  --surface: #f8fafc;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
-  --accent-soft: #eff6ff;
-  --ok: #166534;
+  --accent-subtle: #eff6ff;
+  --ok: #15803d;
   --ok-bg: #f0fdf4;
-  --error: #991b1b;
+  --error: #b91c1c;
   --error-bg: #fef2f2;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  color: var(--text);
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
 body {
-  min-width: 320px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
   background: var(--bg);
+  min-width: 340px;
 }
 
-.app {
-  display: grid;
+/* ── Header ──────────────────────────────────────────── */
+
+.header {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--muted);
 }
 
 /* ── Sections ────────────────────────────────────────── */
 
 .section {
-  padding: 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
-.section-title {
-  font-size: 11px;
+.section-label {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -51,51 +63,53 @@ body {
 /* ── Fields ──────────────────────────────────────────── */
 
 .field {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.field > label {
+.field-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--text);
 }
 
-.field input[type="text"],
-.field input[type="number"] {
+.text-input {
   width: 100%;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 7px;
   font: inherit;
   font-size: 13px;
   color: var(--text);
   background: var(--bg);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.field input:focus {
+.text-input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.text-input:focus {
   border-color: var(--accent);
-}
-
-.field-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 /* ── Toggles ─────────────────────────────────────────── */
 
 .toggles {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
 .toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
 }
@@ -103,18 +117,26 @@ body {
 .toggle input[type="checkbox"] {
   position: absolute;
   opacity: 0;
+  pointer-events: none;
   width: 0;
   height: 0;
 }
 
+.toggle-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+}
+
 .toggle-track {
   position: relative;
-  width: 36px;
-  height: 20px;
+  width: 40px;
+  height: 22px;
   background: var(--border);
   border-radius: 999px;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: background 0.18s ease;
 }
 
 .toggle input:checked ~ .toggle-track {
@@ -125,89 +147,119 @@ body {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 14px;
-  height: 14px;
-  background: white;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
   border-radius: 50%;
-  transition: transform 0.15s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .toggle input:checked ~ .toggle-track .toggle-thumb {
-  transform: translateX(16px);
+  transform: translateX(18px);
 }
 
-.toggle-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-/* ── Interval ────────────────────────────────────────── */
+/* ── Interval inputs ─────────────────────────────────── */
 
 .interval-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
-.interval-field {
+.interval-input {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.interval-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.interval-prefix {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 0 9px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-
-.interval-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
   white-space: nowrap;
 }
 
-.interval-field input[type="number"] {
+.interval-input input[type="number"] {
   flex: 1;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: none;
   font: inherit;
   font-size: 13px;
   color: var(--text);
   background: var(--bg);
   outline: none;
-  transition: border-color 0.15s;
 }
 
-.interval-field input:focus {
-  border-color: var(--accent);
+.interval-input input[type="number"]::-webkit-inner-spin-button,
+.interval-input input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-/* ── Site display ────────────────────────────────────── */
+.interval-input input[type="number"] {
+  -moz-appearance: textfield;
+}
 
-.site-display {
+/* ── Value display ───────────────────────────────────── */
+
+.value-display {
   font-size: 12px;
   color: var(--muted);
   word-break: break-all;
-  min-height: 18px;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  line-height: 1.4;
+}
+
+/* ── Row actions ─────────────────────────────────────── */
+
+.row-actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* ── Footer ──────────────────────────────────────────── */
 
 .footer {
-  padding: 14px 16px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }
 
 /* ── Status ──────────────────────────────────────────── */
 
 .status {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   flex: 1;
   padding: 5px 10px;
   border-radius: 6px;
   display: none;
+  line-height: 1.4;
 }
 
 .status:not(:empty) {
@@ -228,24 +280,31 @@ body {
 
 button {
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
-  border-radius: 6px;
-  padding: 7px 14px;
+  border-radius: 7px;
+  padding: 6px 12px;
   cursor: pointer;
-  transition: background 0.12s, opacity 0.12s;
+  transition: background 0.12s;
   white-space: nowrap;
+  line-height: 1.4;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 
 .primary-button {
   background: var(--accent);
-  color: white;
+  color: #ffffff;
+  padding: 7px 16px;
 }
 
 .primary-button:hover:not(:disabled) {
@@ -253,10 +312,22 @@ button:disabled {
 }
 
 .secondary-button {
-  background: var(--accent-soft);
+  background: var(--accent-subtle);
   color: var(--accent);
 }
 
 .secondary-button:hover:not(:disabled) {
   background: #dbeafe;
+}
+
+.ghost-button {
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ghost-button:hover:not(:disabled) {
+  color: var(--accent-hover);
 }
