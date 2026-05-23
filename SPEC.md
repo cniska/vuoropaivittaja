@@ -78,6 +78,7 @@ A rule with an empty `urlPattern` or empty `selector` is not active.
   5. If the two snapshots differ (compared as JSON strings), fire a change notification (see Feature 3).
   6. Update the stored baseline to the new snapshot.
 - Clicks fire regardless of tab visibility — the extension is designed to run in the background.
+- In multi-frame pages, a frame may start monitoring when the top-level tab URL matches `urlPattern` and that frame contains the configured selector. This allows embedded PowerApps canvases to be monitored even when the iframe URL differs from the browser address bar.
 - Re-initialisation occurs on URL change (hash, popstate, pushState, replaceState) and on `visibilitychange`.
 - The content script guards against running twice per page via a `__vuoropaivittajaLoaded` flag on `globalThis`.
 
@@ -86,7 +87,7 @@ A rule with an empty `urlPattern` or empty `selector` is not active.
 - If the selector starts with `/`, `(`, or `./`, it is treated as XPath; otherwise as CSS.
 - **CSS**: `querySelector` on `document`, then BFS into shadow roots if not found.
 - **XPath**: `document.evaluate` with `FIRST_ORDERED_NODE_TYPE`.
-- The element is scrolled into view, focused, then receives: `pointerover`, `mouseover`, `pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click` events, followed by `.click()`.
+- The element is scrolled into view, focused, then receives one synthetic pointer/mouse activation sequence: `pointerover`, `mouseover`, `pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click`.
 
 ---
 
@@ -111,7 +112,8 @@ A rule with an empty `urlPattern` or empty `selector` is not active.
 - When a page change is detected and `notifications` is `true`, the extension sends a Chrome desktop notification with the title `"Vuoropäivittäjä"` and body `"Uusia vuoroja saattaa olla saatavilla."` ("New slots may be available.").
 - When a page change is detected and `sound` is `true`, the extension plays a short audible alert (a simple beep generated via the Web Audio API — no audio file dependency).
 - Both alerts can fire independently (one can be on while the other is off).
-- Requires the `notifications` permission in the manifest.
+- Requires the `notifications` and `offscreen` permissions in the manifest.
+- Alert sound is played from an extension offscreen document so it is not blocked by the monitored page's frame, audio policy, or CSP.
 
 ---
 
@@ -124,7 +126,8 @@ A rule with an empty `urlPattern` or empty `selector` is not active.
 The popup is a compact single-column panel with two sections:
 
 1. **Settings section** — toggles and interval inputs.
-2. **Setup section** — URL pattern, button selector (with picker), and save.
+2. **Setup section** — active tab origin, button selector, and picker/test actions.
+3. **Autosave notice** — informs the user that changes are saved automatically.
 
 #### Settings section
 
@@ -143,12 +146,12 @@ Interval inputs (two number fields labelled **Päivitysväli (s)**, side by side
 
 Shown below the settings. Allows configuring the monitored page and button.
 
-- **Seurattava sivu** — read-only display of the active tab's origin. Always reflects the current tab; saved as `urlPattern` when Tallenna is clicked.
+- **Seurattava sivu** — read-only display of the active tab's origin. Always reflects the current tab; saved as `urlPattern` whenever the selector is saved.
 - **Painikkeen valitsin** — text input; accepts CSS or XPath.
   - **Valitse sivulta** button — activates the element picker (saves form state, sends `start-picker` to the tab, closes popup).
   - **Testaa** button — sends a one-shot click of the current selector to the active tab's content script and shows the result (success or error) in the status area. Useful for verifying the selector before enabling monitoring.
 
-A single **Tallenna** button at the bottom persists both settings and setup. Status area shows **Tallennettu** on success or an error message in Finnish.
+Changes persist automatically: toggles and interval inputs save on change, and the selector saves on change. A bottom toast shows success or error messages in Finnish, uses a polite live region for assistive technology, and dismisses itself after a short delay.
 
 ---
 
@@ -161,14 +164,15 @@ A single **Tallenna** button at the bottom persists both settings and setup. Sta
 - Activating the picker closes the popup and saves form state as a draft.
 - The content script overlays the page: a highlight follows the pointer over button-like elements; a fixed hint banner reads `"Vuoropäivittäjä: klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi"`.
 - Only button-like elements are selectable: `button`, `input[type="button"]`, `input[type="submit"]`, `input[type="reset"]`, `[role="button"]`.
-- On click: builds a selector, saves `{ selector, url, timestamp }` under `lastPickedElement`, exits picker.
+- On click: builds a selector, sends it to the background service worker, which saves `{ selector, url, frameId, tabId, timestamp }` under `lastPickedElement`; then the picker exits.
 - `Escape` cancels without saving.
+- After a picker round trip, **Testaa** targets the same frame that produced the selector. If the selector is edited manually, that frame hint is cleared.
 
 #### Selector building priority
 
-1. Indexed XPath `(<xpath>)[n]` if the element has duplicate matches on a preferred attribute or stable class.
-2. Unique CSS candidate: `#id`, `tag[attr]`, `tag.class`, or DOM path — first that matches exactly one element.
-3. XPath fallback: indexed attribute/class XPath, or absolute path.
+1. Unique CSS candidate: `#id`, `tag[attr]`, `tag.class`, or DOM path — first that matches exactly one element.
+2. Indexed XPath `(<xpath>)[n]` if the element has duplicate matches on a preferred attribute or stable class.
+3. XPath fallback: attribute/class XPath, or absolute path.
 
 **Preferred attributes**: `data-testid`, `data-test`, `data-automation-id`, `aria-label`, `name`, `title`, `type`, `role`.
 
