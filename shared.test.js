@@ -2,28 +2,104 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  DEFAULT_INTERVAL_MS,
-  MIN_INTERVAL_MS,
-  clampIntervalMs,
+  normalizeSettings,
+  normalizeRule,
   urlMatches,
   looksLikeXPath,
   isStableIdentifier,
-  normalizeRule,
-  normalizeRules,
 } = require("./shared.js");
 
-test("clampIntervalMs uses the shared default", () => {
-  assert.equal(clampIntervalMs(undefined), DEFAULT_INTERVAL_MS);
+// normalizeSettings
+
+test("normalizeSettings returns defaults for empty input", () => {
+  const s = normalizeSettings({});
+  assert.equal(s.enabled, false);
+  assert.equal(s.notifications, true);
+  assert.equal(s.sound, true);
+  assert.equal(s.minIntervalMs, 30000);
+  assert.equal(s.maxIntervalMs, 90000);
 });
 
-test("clampIntervalMs enforces the minimum interval", () => {
-  assert.equal(clampIntervalMs(100), MIN_INTERVAL_MS);
-  assert.equal(clampIntervalMs("400"), MIN_INTERVAL_MS);
+test("normalizeSettings returns defaults for null input", () => {
+  const s = normalizeSettings(null);
+  assert.equal(s.enabled, false);
+  assert.equal(s.notifications, true);
+  assert.equal(s.sound, true);
 });
 
-test("clampIntervalMs still supports legacy minutes", () => {
-  assert.equal(clampIntervalMs(undefined, 0.25), 15000);
+test("normalizeSettings respects enabled flag", () => {
+  assert.equal(normalizeSettings({ enabled: true }).enabled, true);
+  assert.equal(normalizeSettings({ enabled: false }).enabled, false);
 });
+
+test("normalizeSettings respects notifications and sound flags", () => {
+  const s = normalizeSettings({ notifications: false, sound: false });
+  assert.equal(s.notifications, false);
+  assert.equal(s.sound, false);
+});
+
+test("normalizeSettings clamps minIntervalMs to 2000", () => {
+  assert.equal(normalizeSettings({ minIntervalMs: 500 }).minIntervalMs, 2000);
+  assert.equal(normalizeSettings({ minIntervalMs: 2000 }).minIntervalMs, 2000);
+  assert.equal(normalizeSettings({ minIntervalMs: 5000 }).minIntervalMs, 5000);
+});
+
+test("normalizeSettings clamps maxIntervalMs to minIntervalMs when max < min", () => {
+  const s = normalizeSettings({ minIntervalMs: 10000, maxIntervalMs: 5000 });
+  assert.equal(s.minIntervalMs, 10000);
+  assert.equal(s.maxIntervalMs, 10000);
+});
+
+test("normalizeSettings accepts valid min and max", () => {
+  const s = normalizeSettings({ minIntervalMs: 10000, maxIntervalMs: 60000 });
+  assert.equal(s.minIntervalMs, 10000);
+  assert.equal(s.maxIntervalMs, 60000);
+});
+
+// normalizeRule
+
+test("normalizeRule returns null when urlPattern is empty", () => {
+  assert.equal(normalizeRule({ urlPattern: "", selector: "button" }), null);
+});
+
+test("normalizeRule returns null when selector is empty", () => {
+  assert.equal(
+    normalizeRule({ urlPattern: "apps.powerapps.com", selector: "" }),
+    null
+  );
+});
+
+test("normalizeRule returns null for non-object input", () => {
+  assert.equal(normalizeRule(null), null);
+  assert.equal(normalizeRule(undefined), null);
+  assert.equal(normalizeRule("string"), null);
+});
+
+test("normalizeRule trims whitespace from all string fields", () => {
+  const rule = normalizeRule({
+    urlPattern: " apps.powerapps.com ",
+    selector: " (//button[@aria-label='Päivitä luettelo'])[2] ",
+    listSelector: " div.gallery ",
+    targetUrl: " https://apps.powerapps.com/play/app ",
+  });
+
+  assert.equal(rule.urlPattern, "apps.powerapps.com");
+  assert.equal(rule.selector, "(//button[@aria-label='Päivitä luettelo'])[2]");
+  assert.equal(rule.listSelector, "div.gallery");
+  assert.equal(rule.targetUrl, "https://apps.powerapps.com/play/app");
+});
+
+test("normalizeRule defaults listSelector and targetUrl to empty string", () => {
+  const rule = normalizeRule({
+    urlPattern: "apps.powerapps.com",
+    selector: "button",
+  });
+
+  assert.equal(rule.listSelector, "");
+  assert.equal(rule.targetUrl, "");
+});
+
+// urlMatches
 
 test("urlMatches compares case-insensitively", () => {
   assert.equal(
@@ -36,6 +112,8 @@ test("urlMatches compares case-insensitively", () => {
   );
 });
 
+// looksLikeXPath
+
 test("looksLikeXPath detects common XPath formats", () => {
   assert.equal(
     looksLikeXPath("(//button[@aria-label='Päivitä luettelo'])[2]"),
@@ -45,6 +123,8 @@ test("looksLikeXPath detects common XPath formats", () => {
   assert.equal(looksLikeXPath("./div/button"), true);
   assert.equal(looksLikeXPath("button[aria-label='Päivitä luettelo']"), false);
 });
+
+// isStableIdentifier
 
 test("isStableIdentifier rejects dynamic Power Apps ids", () => {
   assert.equal(
@@ -58,62 +138,4 @@ test("isStableIdentifier rejects dynamic Power Apps ids", () => {
     false
   );
   assert.equal(isStableIdentifier("refreshButton"), true);
-});
-
-test("normalizeRule trims values and preserves a saved target URL", () => {
-  const normalized = normalizeRule(
-    {
-      id: "rule-1",
-      name: " Refresh ",
-      urlPattern: " apps.powerapps.com ",
-      selector: " (//button[@aria-label='Päivitä luettelo'])[2] ",
-      targetUrl: " https://apps.powerapps.com/play/app ",
-      intervalMs: 1200,
-      activateTab: 1,
-      enabled: true,
-    },
-    { requireId: true }
-  );
-
-  assert.deepEqual(normalized, {
-    id: "rule-1",
-    name: "Refresh",
-    urlPattern: "apps.powerapps.com",
-    selector: "(//button[@aria-label='Päivitä luettelo'])[2]",
-    targetUrl: "https://apps.powerapps.com/play/app",
-    activateTab: true,
-    intervalMs: 1200,
-    enabled: true,
-  });
-});
-
-test("normalizeRule rejects incomplete rules", () => {
-  assert.equal(normalizeRule({ urlPattern: "apps.powerapps.com" }), null);
-  assert.equal(normalizeRule({ selector: "button" }), null);
-  assert.equal(
-    normalizeRule(
-      { urlPattern: "apps.powerapps.com", selector: "button" },
-      { requireId: true }
-    ),
-    null
-  );
-});
-
-test("normalizeRules can create ids for popup-created rules", () => {
-  let nextId = 1;
-  const rules = normalizeRules(
-    [
-      {
-        urlPattern: "apps.powerapps.com",
-        selector: "button[aria-label='Päivitä luettelo']",
-      },
-    ],
-    {
-      createId: () => `generated-${nextId++}`,
-    }
-  );
-
-  assert.equal(rules.length, 1);
-  assert.equal(rules[0].id, "generated-1");
-  assert.equal(rules[0].intervalMs, DEFAULT_INTERVAL_MS);
 });

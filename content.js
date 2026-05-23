@@ -1,20 +1,18 @@
-if (!globalThis.__autoClickerLoaded) {
-  globalThis.__autoClickerLoaded = true;
+if (!globalThis.__vuoropaivittajaLoaded) {
+  globalThis.__vuoropaivittajaLoaded = true;
 
-  const STORAGE_KEY = "rules";
   const PICK_RESULT_KEY = "lastPickedElement";
-  const { normalizeRules, urlMatches, looksLikeXPath, isStableIdentifier } =
-    globalThis.AutoClickerShared;
+  const { normalizeSettings, normalizeRule, urlMatches, looksLikeXPath, isStableIdentifier } =
+    globalThis.VuoropaivittajaShared;
 
-  const activeTimers = new Map();
   let lastUrl = location.href;
   let pickerState = null;
 
   void initialize();
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && changes[STORAGE_KEY]) {
-      applyRules(normalizeRules(changes[STORAGE_KEY].newValue));
+    if (areaName === "local" && (changes["settings"] || changes["rule"])) {
+      void initialize();
     }
   });
 
@@ -24,35 +22,33 @@ if (!globalThis.__autoClickerLoaded) {
       sendResponse({
         ok: true,
         message:
-          "Click the target element on the page. Press Escape to cancel.",
+          "Vuoropäivittäjä: klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi",
       });
       return false;
     }
 
     if (message?.type === "test-rule") {
-      const normalizedRule = normalizeRules([
-        { ...message.rule, id: "preview", enabled: true },
-      ])[0];
-      if (!normalizedRule) {
+      const rule = normalizeRule(message.rule);
+      if (!rule) {
         sendResponse({
           ok: false,
-          error: "Please enter a valid URL pattern and selector first.",
+          error: "Syötä kelvollinen URL-kuvio ja valitsin ensin.",
         });
         return false;
       }
 
-      if (!urlMatches(normalizedRule.urlPattern, location.href)) {
+      if (!urlMatches(rule.urlPattern, location.href)) {
         sendResponse({
           ok: false,
-          error: "The current tab URL does not match this rule.",
+          error: "Tämän välilehden URL ei täsmää säännön kanssa.",
         });
         return false;
       }
 
-      const result = clickSelectorInPage(normalizedRule.selector);
+      const result = clickSelectorInPage(rule.selector);
       sendResponse(
         result.clicked
-          ? { ok: true, message: "Clicked the matching element." }
+          ? { ok: true, message: "Painike klikattu onnistuneesti." }
           : { ok: false, error: result.message }
       );
       return false;
@@ -69,8 +65,13 @@ if (!globalThis.__autoClickerLoaded) {
   patchHistoryMethod("replaceState");
 
   async function initialize() {
-    const stored = await chrome.storage.local.get({ [STORAGE_KEY]: [] });
-    applyRules(normalizeRules(stored[STORAGE_KEY], { requireId: true }));
+    const stored = await chrome.storage.local.get({ settings: {}, rule: {} });
+    const settings = normalizeSettings(stored.settings);
+    const rule = normalizeRule(stored.rule);
+
+    if (settings.enabled && rule && urlMatches(rule.urlPattern, location.href)) {
+      console.log("[Vuoropäivittäjä] monitoring active");
+    }
   }
 
   function patchHistoryMethod(methodName) {
@@ -101,51 +102,6 @@ if (!globalThis.__autoClickerLoaded) {
     }
   }
 
-  function applyRules(rules) {
-    const matchingRules = rules.filter(
-      (rule) => rule.enabled && urlMatches(rule.urlPattern, location.href)
-    );
-    const nextIds = new Set(matchingRules.map((rule) => rule.id));
-
-    for (const [ruleId, timerId] of activeTimers.entries()) {
-      if (!nextIds.has(ruleId)) {
-        clearInterval(timerId);
-        activeTimers.delete(ruleId);
-      }
-    }
-
-    for (const rule of matchingRules) {
-      const existingTimer = activeTimers.get(rule.id);
-      if (existingTimer) {
-        clearInterval(existingTimer);
-        activeTimers.delete(rule.id);
-      }
-
-      const timerId = window.setInterval(() => {
-        void runRule(rule);
-      }, rule.intervalMs);
-
-      activeTimers.set(rule.id, timerId);
-    }
-  }
-
-  async function runRule(rule) {
-    if (document.visibilityState !== "visible") {
-      return;
-    }
-
-    if (rule.activateTab) {
-      const activated = await requestTabActivation();
-      if (!activated) {
-        return;
-      }
-
-      await delay(120);
-    }
-
-    clickSelectorInPage(rule.selector);
-  }
-
   function startPicker() {
     stopPicker();
 
@@ -166,7 +122,7 @@ if (!globalThis.__autoClickerLoaded) {
     const hint = document.createElement("div");
     hint.dataset.autoClickerOverlay = "true";
     hint.textContent =
-      "Auto Clicker: click the target element, or press Escape to cancel";
+      "Click the target element, or press Escape to cancel";
     hint.style.position = "fixed";
     hint.style.top = "16px";
     hint.style.right = "16px";
@@ -746,17 +702,6 @@ if (!globalThis.__autoClickerLoaded) {
     }
 
     element.dispatchEvent(new EventType(type, options));
-  }
-
-  async function requestTabActivation() {
-    try {
-      const response = await chrome.runtime.sendMessage({
-        type: "activate-sender-tab",
-      });
-      return Boolean(response?.ok);
-    } catch {
-      return false;
-    }
   }
 
   function delay(durationMs) {

@@ -1,19 +1,48 @@
-(function initializeAutoClickerShared(globalScope) {
-  const DEFAULT_INTERVAL_MS = 10000;
-  const MIN_INTERVAL_MS = 500;
+(function initializeVuoropaivittajaShared(globalScope) {
+  const DEFAULT_MIN_INTERVAL_MS = 30000;
+  const DEFAULT_MAX_INTERVAL_MS = 90000;
+  const ABSOLUTE_MIN_INTERVAL_MS = 2000;
 
-  function clampIntervalMs(intervalMs, legacyIntervalMinutes) {
-    const directValue = Number(intervalMs);
-    if (Number.isFinite(directValue)) {
-      return Math.max(MIN_INTERVAL_MS, directValue);
+  function normalizeSettings(value) {
+    const s = value && typeof value === "object" ? value : {};
+    const minIntervalMs = Math.max(
+      ABSOLUTE_MIN_INTERVAL_MS,
+      Number.isFinite(Number(s.minIntervalMs))
+        ? Number(s.minIntervalMs)
+        : DEFAULT_MIN_INTERVAL_MS
+    );
+    const rawMax = Number.isFinite(Number(s.maxIntervalMs))
+      ? Number(s.maxIntervalMs)
+      : DEFAULT_MAX_INTERVAL_MS;
+    const maxIntervalMs = Math.max(minIntervalMs, rawMax);
+
+    return {
+      enabled: Boolean(s.enabled),
+      notifications: s.notifications === undefined ? true : Boolean(s.notifications),
+      sound: s.sound === undefined ? true : Boolean(s.sound),
+      minIntervalMs,
+      maxIntervalMs,
+    };
+  }
+
+  function normalizeRule(value) {
+    if (!value || typeof value !== "object") {
+      return null;
     }
 
-    const legacyMinutes = Number(legacyIntervalMinutes);
-    if (Number.isFinite(legacyMinutes)) {
-      return Math.max(MIN_INTERVAL_MS, legacyMinutes * 60 * 1000);
+    const urlPattern = String(value.urlPattern || "").trim();
+    const selector = String(value.selector || "").trim();
+
+    if (!urlPattern || !selector) {
+      return null;
     }
 
-    return DEFAULT_INTERVAL_MS;
+    return {
+      urlPattern,
+      selector,
+      listSelector: String(value.listSelector || "").trim(),
+      targetUrl: String(value.targetUrl || "").trim(),
+    };
   }
 
   function urlMatches(pattern, url) {
@@ -46,59 +75,15 @@
     );
   }
 
-  function normalizeRule(rule, options = {}) {
-    if (!rule || typeof rule !== "object") {
-      return null;
-    }
-
-    const requireId = Boolean(options.requireId);
-    const createId =
-      typeof options.createId === "function" ? options.createId : null;
-    const rawId = String(rule.id || "").trim();
-    const id = rawId || (!requireId && createId ? String(createId()) : "");
-
-    const normalizedRule = {
-      id,
-      name: String(rule.name || "").trim(),
-      urlPattern: String(rule.urlPattern || "").trim(),
-      selector: String(rule.selector || "").trim(),
-      targetUrl: String(rule.targetUrl || "").trim(),
-      activateTab: Boolean(rule.activateTab),
-      intervalMs: clampIntervalMs(rule.intervalMs, rule.intervalMinutes),
-      enabled: Boolean(rule.enabled),
-    };
-
-    if (!normalizedRule.urlPattern || !normalizedRule.selector) {
-      return null;
-    }
-
-    if (requireId && !normalizedRule.id) {
-      return null;
-    }
-
-    return normalizedRule;
-  }
-
-  function normalizeRules(value, options = {}) {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value.map((rule) => normalizeRule(rule, options)).filter(Boolean);
-  }
-
   const api = {
-    DEFAULT_INTERVAL_MS,
-    MIN_INTERVAL_MS,
-    clampIntervalMs,
+    normalizeSettings,
+    normalizeRule,
     urlMatches,
     looksLikeXPath,
     isStableIdentifier,
-    normalizeRule,
-    normalizeRules,
   };
 
-  globalScope.AutoClickerShared = api;
+  globalScope.VuoropaivittajaShared = api;
 
   if (typeof module === "object" && module.exports) {
     module.exports = api;
