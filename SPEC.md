@@ -11,7 +11,8 @@ The extension is configured once for a single URL and button, then runs silently
 - Listing or storing found slots.
 - History of past notifications.
 - Multiple monitored sites simultaneously.
-- Sound or notification testing buttons.
+- Sound or notification testing (e.g. "test audio" button).
+- Manual URL text input — the URL is always taken from the active tab.
 
 ---
 
@@ -130,10 +131,10 @@ Controls (rendered as labelled toggle switches):
 - **Työpöytäilmoitus** — maps to `notifications`. Send desktop notification on change.
 - **Äänimerkki** — maps to `sound`. Play audio on change.
 
-Interval inputs (two number fields, side by side):
+Interval inputs (two number fields, side by side, values entered and displayed in **seconds**):
 
-- **Min (s)** — minimum interval in seconds; stored as `minIntervalMs`. Minimum value: 2.
-- **Max (s)** — maximum interval in seconds; stored as `maxIntervalMs`. Must be ≥ min.
+- **Min** — minimum interval in seconds; stored internally as `minIntervalMs = value × 1000`. Minimum value: 2 s.
+- **Max** — maximum interval in seconds; stored internally as `maxIntervalMs = value × 1000`. Must be ≥ min.
 
 A **Save** button persists the settings and restarts the monitoring cycle with the new values.
 
@@ -141,15 +142,16 @@ Status area: one line below the save button showing success or error feedback.
 
 #### Setup section
 
-Shown below the settings. Allows configuring the monitored URL and button.
+Shown below the settings. Allows configuring the monitored page and button.
 
-- **URL contains** — text input; pre-filled with the active tab's origin on first open.
+- **Monitored page** — read-only display of the currently configured `targetUrl`, or `"Not set"` if unconfigured.
+- **Set to current tab** button — sets `urlPattern` to the active tab's origin and `targetUrl` to the full active tab URL. Shows the new URL in the display.
 - **Button selector** — text input; accepts CSS or XPath.
   - **Pick from page** button — activates the element picker (saves form state, sends `start-picker` to the tab, closes popup).
-- **Use this site** button — fills URL contains with the active tab's origin and stores the full tab URL as `targetUrl`.
+  - **Test** button — sends a one-shot click of the current selector to the active tab's content script and shows the result (success or error) in the status area. Useful for verifying the selector before enabling monitoring.
 - **Save setup** button — persists the rule.
 
-If both settings and setup are saved and valid, monitoring starts automatically.
+If setup is saved and valid, and `enabled` is on, monitoring starts automatically.
 
 ---
 
@@ -185,7 +187,9 @@ When the popup reopens: load draft → fill selector from `lastPickedElement` �
 
 - **No build step** — plain ES2020+ scripts; `shared.js` exports to `globalThis.VuoropaivittajaShared` and `module.exports` for Node.js tests.
 - **Tests** — shared utility functions covered by `node --test` unit tests.
-- **Interval randomisation** — each tick schedules the next with `Math.random()` in `[min, max]`.
+- **Interval inputs in seconds** — the popup displays and accepts seconds; the extension stores and uses milliseconds internally (`ms = s × 1000`).
+- **Interval randomisation** — each tick schedules the next with `Math.floor(Math.random() * (max - min + 1)) + min` ms.
+- **URL pattern derivation** — `urlPattern` is set to the origin of the active tab URL (scheme + host + port); `targetUrl` is the full URL. The user never types a URL manually.
 - **Shadow DOM** — CSS selector search traverses shadow roots BFS; XPath does not.
 - **SPA support** — patches `history.pushState`/`replaceState`, listens to `hashchange` and `popstate`.
 - **Idempotent loading** — `__vuoropaivittajaLoaded` guard prevents double-init.
