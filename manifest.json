@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Auto Clicker",
+  "name": "Vuoropäivittäjä",
   "version": "1.0.0",
-  "description": "Clicks configured buttons on matching pages at custom intervals.",
+  "description": "Tarkkailee varattavia vuoroja ja ilmoittaa uusista ajoista.",
   "minimum_chrome_version": "120",
   "permissions": [
     "scripting",
@@ -29,7 +29,7 @@
     }
   ],
   "action": {
-    "default_title": "Auto Clicker",
+    "default_title": "Vuoropäivittäjä",
     "default_popup": "popup.html"
   }
 }
