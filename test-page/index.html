@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vuoropäivittäjä — Testisivu</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #f1f5f9;
+        color: #1e293b;
+        min-height: 100vh;
+      }
+
+      .control-panel {
+        background: #1e293b;
+        color: #f8fafc;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 13px;
+      }
+
+      .control-panel strong {
+        margin-right: 6px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 11px;
+      }
+
+      .control-panel button {
+        background: #334155;
+        color: #f8fafc;
+        border: 1px solid #475569;
+        border-radius: 6px;
+        padding: 5px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.15s;
+      }
+
+      .control-panel button:hover {
+        background: #475569;
+      }
+
+      .control-panel button.active {
+        background: #2563eb;
+        border-color: #2563eb;
+      }
+
+      #state-label {
+        margin-left: auto;
+        color: #64748b;
+        font-size: 12px;
+      }
+
+      .page {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+
+      h1 {
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .subtitle {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 28px;
+      }
+
+      .app-wrapper {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+      }
+
+      .app-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .app-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .refresh-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #2563eb;
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s, transform 0.1s;
+        outline-offset: 2px;
+      }
+
+      .refresh-button:hover {
+        background: #1d4ed8;
+      }
+
+      .refresh-button:active {
+        transform: scale(0.97);
+      }
+
+      .refresh-button:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 3px;
+      }
+
+      .refresh-button svg {
+        width: 15px;
+        height: 15px;
+        fill: currentColor;
+      }
+
+      .slot-list {
+        padding: 16px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 120px;
+      }
+
+      .slot-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        animation: fadeIn 0.2s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .slot-time {
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .slot-location {
+        font-size: 13px;
+        color: #64748b;
+      }
+
+      .slot-badge {
+        display: inline-block;
+        background: #dcfce7;
+        color: #15803d;
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-left: 10px;
+      }
+
+      .empty-state {
+        color: #94a3b8;
+        font-size: 14px;
+        text-align: center;
+        padding: 32px;
+      }
+
+      .click-log {
+        border-top: 1px solid #e2e8f0;
+        padding: 12px 24px;
+        font-size: 12px;
+        color: #94a3b8;
+        min-height: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="control-panel">
+      <strong>Testipaneeli</strong>
+      <button id="btn-state-0" onclick="setSlotState(0)">Tila 1 — 3 vuoroa</button>
+      <button id="btn-state-1" onclick="setSlotState(1)">Tila 2 — 5 vuoroa (uusia!)</button>
+      <button id="btn-state-2" onclick="setSlotState(2)">Tila 3 — 2 vuoroa</button>
+      <span id="state-label"></span>
+    </div>
+
+    <div class="page">
+      <h1>Vapaavuorovaraus</h1>
+      <p class="subtitle">Simuloi PowerApps-sovelluksen vuorolistaa.</p>
+
+      <div class="app-wrapper" data-testid="vuoro-app">
+        <div class="app-header">
+          <span class="app-title">Saatavilla olevat vuorot</span>
+          <div
+            role="button"
+            data-control-name="refresh_button"
+            aria-label="Päivitä vuorolista"
+            class="refresh-button"
+            tabindex="0"
+          >
+            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+            </svg>
+            Päivitä
+          </div>
+        </div>
+
+        <div role="list" aria-label="Vuorolista" data-testid="vuoro-lista" class="slot-list">
+          <!-- rendered by JS -->
+        </div>
+
+        <div class="click-log" id="click-log">Klikkauksia: 0</div>
+      </div>
+    </div>
+
+    <script>
+      const STATES = [
+        [
+          { time: "Ma 26.5. 08:00–16:00", location: "Helsinki", isNew: false },
+          { time: "Ti 27.5. 12:00–20:00", location: "Espoo", isNew: false },
+          { time: "Ke 28.5. 06:00–14:00", location: "Vantaa", isNew: false },
+        ],
+        [
+          { time: "Ma 26.5. 08:00–16:00", location: "Helsinki", isNew: false },
+          { time: "Ti 27.5. 12:00–20:00", location: "Espoo", isNew: false },
+          { time: "Ke 28.5. 06:00–14:00", location: "Vantaa", isNew: false },
+          { time: "To 29.5. 10:00–18:00", location: "Helsinki", isNew: true },
+          { time: "Pe 30.5. 14:00–22:00", location: "Espoo", isNew: true },
+        ],
+        [
+          { time: "Ti 27.5. 12:00–20:00", location: "Espoo", isNew: false },
+          { time: "Pe 30.5. 14:00–22:00", location: "Espoo", isNew: false },
+        ],
+      ];
+
+      let currentState = 0;
+      let clickCount = 0;
+
+      function renderSlots(state) {
+        const list = document.querySelector('[role="list"]');
+        const slots = STATES[state];
+
+        if (slots.length === 0) {
+          list.innerHTML = '<div class="empty-state">Ei saatavilla olevia vuoroja.</div>';
+        } else {
+          list.innerHTML = slots
+            .map(
+              (slot) => `
+            <div role="listitem" class="slot-item">
+              <span class="slot-time">${slot.time}${slot.isNew ? '<span class="slot-badge">Uusi</span>' : ""}</span>
+              <span class="slot-location">${slot.location}</span>
+            </div>
+          `
+            )
+            .join("");
+        }
+
+        document.getElementById("state-label").textContent =
+          `Tila ${state + 1} — ${slots.length} vuoroa`;
+
+        for (let i = 0; i < 3; i++) {
+          const btn = document.getElementById(`btn-state-${i}`);
+          btn.classList.toggle("active", i === state);
+        }
+      }
+
+      function setSlotState(state) {
+        currentState = state;
+        renderSlots(state);
+      }
+
+      const refreshBtn = document.querySelector('[role="button"]');
+
+      function handleRefreshClick() {
+        clickCount += 1;
+        currentState = (currentState + 1) % STATES.length;
+        renderSlots(currentState);
+        document.getElementById("click-log").textContent = `Klikkauksia: ${clickCount} — tila vaihtui → ${currentState + 1}`;
+      }
+
+      refreshBtn.addEventListener("click", handleRefreshClick);
+
+      refreshBtn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleRefreshClick();
+        }
+      });
+
+      renderSlots(0);
+    </script>
+  </body>
+</html>

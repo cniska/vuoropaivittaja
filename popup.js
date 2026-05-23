@@ -11,7 +11,6 @@ const soundInput = document.getElementById("sound");
 const minIntervalInput = document.getElementById("min-interval");
 const maxIntervalInput = document.getElementById("max-interval");
 const targetUrlDisplay = document.getElementById("target-url-display");
-const setCurrentSiteButton = document.getElementById("set-current-site");
 const selectorInput = document.getElementById("selector");
 const pickElementButton = document.getElementById("pick-element");
 const testSelectorButton = document.getElementById("test-selector");
@@ -19,8 +18,6 @@ const saveButton = document.getElementById("save");
 const statusEl = document.getElementById("status");
 
 let activeTab = null;
-let savedTargetUrl = "";
-let savedUrlPattern = "";
 
 void initialize();
 
@@ -63,26 +60,13 @@ saveButton.addEventListener("click", async () => {
       maxIntervalMs: maxSec * 1000,
     },
     [RULE_KEY]: {
-      urlPattern: savedUrlPattern,
+      urlPattern: urlPatternFromTab(),
       selector: selectorInput.value.trim(),
       listSelector: "",
-      targetUrl: savedTargetUrl,
     },
   });
 
   setStatus("Tallennettu.");
-});
-
-setCurrentSiteButton.addEventListener("click", () => {
-  if (!activeTab?.url) {
-    setStatus("Ei aktiivista välilehteä.", true);
-    return;
-  }
-
-  savedTargetUrl = activeTab.url;
-  savedUrlPattern = originOf(activeTab.url);
-  targetUrlDisplay.textContent = activeTab.url;
-  setStatus("Nykyinen sivu asetettu.");
 });
 
 pickElementButton.addEventListener("click", async () => {
@@ -96,7 +80,10 @@ pickElementButton.addEventListener("click", async () => {
     await sendToActiveTab({ type: "start-picker" });
     window.close();
   } catch {
-    setStatus("Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä uudelleen.", true);
+    setStatus(
+      "Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä uudelleen.",
+      true
+    );
   }
 });
 
@@ -115,10 +102,12 @@ testSelectorButton.addEventListener("click", async () => {
   try {
     const response = await sendToActiveTab({
       type: "test-rule",
-      rule: { urlPattern: savedUrlPattern || originOf(activeTab.url ?? ""), selector },
+      rule: { urlPattern: urlPatternFromTab(), selector },
     });
     setStatus(
-      response?.ok ? response.message : (response?.error ?? "Testi epäonnistui."),
+      response?.ok
+        ? response.message
+        : (response?.error ?? "Testi epäonnistui."),
       !response?.ok
     );
   } catch {
@@ -135,11 +124,8 @@ function fillSettings(settings) {
 }
 
 function fillRule(rule) {
-  if (!rule) return;
-  savedUrlPattern = rule.urlPattern;
-  savedTargetUrl = rule.targetUrl;
-  selectorInput.value = rule.selector;
-  targetUrlDisplay.textContent = rule.targetUrl || "Ei asetettu";
+  if (rule) selectorInput.value = rule.selector;
+  targetUrlDisplay.textContent = urlPatternFromTab() || "Ei asetettu";
 }
 
 function setStatus(message, isError = false) {
@@ -147,13 +133,17 @@ function setStatus(message, isError = false) {
   statusEl.dataset.state = isError ? "error" : "success";
 }
 
+function urlPatternFromTab() {
+  try {
+    return new URL(activeTab?.url ?? "").origin;
+  } catch {
+    return "";
+  }
+}
+
 async function saveDraft() {
   await chrome.storage.local.set({
-    [DRAFT_KEY]: {
-      urlPattern: savedUrlPattern,
-      targetUrl: savedTargetUrl,
-      selector: selectorInput.value.trim(),
-    },
+    [DRAFT_KEY]: { selector: selectorInput.value.trim() },
   });
 }
 
@@ -162,11 +152,7 @@ async function loadDraft() {
   const draft = stored[DRAFT_KEY];
   if (!draft || typeof draft !== "object") return;
 
-  savedUrlPattern = String(draft.urlPattern ?? "");
-  savedTargetUrl = String(draft.targetUrl ?? "");
   selectorInput.value = String(draft.selector ?? "");
-  if (savedTargetUrl) targetUrlDisplay.textContent = savedTargetUrl;
-
   await chrome.storage.local.remove(DRAFT_KEY);
 }
 
@@ -176,22 +162,8 @@ async function loadPickedElement() {
   if (!picked?.selector) return;
 
   selectorInput.value = picked.selector;
-  if (picked.url) {
-    savedTargetUrl = picked.url;
-    savedUrlPattern = originOf(picked.url);
-    targetUrlDisplay.textContent = picked.url;
-  }
-
   await chrome.storage.local.remove(PICK_RESULT_KEY);
   setStatus("Painike valittu sivulta.");
-}
-
-function originOf(url) {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return url;
-  }
 }
 
 async function sendToActiveTab(message) {

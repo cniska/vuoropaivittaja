@@ -14,32 +14,16 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  void ensureTabOpen();
-});
-
-chrome.runtime.onInstalled.addListener(() => {
-  void ensureTabOpen();
-});
-
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local" && (changes["settings"] || changes["rule"])) {
-    void ensureTabOpen();
-  }
-});
-
 chrome.tabs.onRemoved.addListener(() => {
-  void ensureTabOpen();
+  void disableIfNoMatchingTab();
 });
 
-async function ensureTabOpen() {
+async function disableIfNoMatchingTab() {
   const stored = await chrome.storage.local.get({ settings: {}, rule: {} });
   const settings = normalizeSettings(stored.settings);
   const rule = normalizeRule(stored.rule);
 
-  if (!settings.enabled || !rule || !rule.targetUrl) {
-    return;
-  }
+  if (!settings.enabled || !rule) return;
 
   const openTabs = await chrome.tabs.query({});
   const hasMatchingTab = openTabs.some(
@@ -47,6 +31,10 @@ async function ensureTabOpen() {
   );
 
   if (!hasMatchingTab) {
-    await chrome.tabs.create({ url: rule.targetUrl, active: true });
+    const rawSettings =
+      typeof stored.settings === "object" ? stored.settings : {};
+    await chrome.storage.local.set({
+      settings: { ...rawSettings, enabled: false },
+    });
   }
 }

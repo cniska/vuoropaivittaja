@@ -2,8 +2,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   globalThis.__vuoropaivittajaLoaded = true;
 
   const PICK_RESULT_KEY = "lastPickedElement";
-  const { normalizeSettings, normalizeRule, urlMatches, looksLikeXPath, isStableIdentifier } =
-    globalThis.VuoropaivittajaShared;
+  const {
+    normalizeSettings,
+    normalizeRule,
+    urlMatches,
+    looksLikeXPath,
+    isStableIdentifier,
+  } = globalThis.VuoropaivittajaShared;
 
   let lastUrl = location.href;
   let pickerState = null;
@@ -12,7 +17,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
   void initialize();
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && (changes["settings"] || changes["rule"])) {
+    if (areaName === "local" && (changes.settings || changes.rule)) {
       void initialize();
     }
   });
@@ -22,8 +27,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       startPicker();
       sendResponse({
         ok: true,
-        message:
-          "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",
+        message: "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",
       });
       return false;
     }
@@ -73,7 +77,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     monitoringSession += 1;
     const session = monitoringSession;
 
-    if (settings.enabled && rule && urlMatches(rule.urlPattern, location.href)) {
+    if (
+      settings.enabled &&
+      rule &&
+      urlMatches(rule.urlPattern, location.href)
+    ) {
       void ensureListSelector(rule);
       void startMonitoring(settings, rule, session);
     }
@@ -81,7 +89,9 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
   async function startMonitoring(settings, rule, session) {
     while (monitoringSession === session) {
-      await delay(randomInterval(settings.minIntervalMs, settings.maxIntervalMs));
+      await delay(
+        randomInterval(settings.minIntervalMs, settings.maxIntervalMs)
+      );
       if (monitoringSession !== session) break;
 
       const before = takeSnapshot(rule.listSelector);

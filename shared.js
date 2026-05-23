@@ -18,7 +18,8 @@
 
     return {
       enabled: Boolean(s.enabled),
-      notifications: s.notifications === undefined ? true : Boolean(s.notifications),
+      notifications:
+        s.notifications === undefined ? true : Boolean(s.notifications),
       sound: s.sound === undefined ? true : Boolean(s.sound),
       minIntervalMs,
       maxIntervalMs,
@@ -41,7 +42,6 @@
       urlPattern,
       selector,
       listSelector: String(value.listSelector || "").trim(),
-      targetUrl: String(value.targetUrl || "").trim(),
     };
   }
 
