@@ -4,6 +4,7 @@ const {
   normalizeSettings,
   normalizeRule,
   shouldMonitorTab,
+  mergeSlotHistory,
   urlMatches,
   createLogger,
 } = self.VuoropaivittajaShared;
@@ -135,7 +136,29 @@ async function fireChangeAlert(message) {
     alerts.push(playAlertSound());
   }
 
+  if (Array.isArray(message.slots) && message.slots.length > 0) {
+    alerts.push(updateSlotHistory(message.slots));
+  }
+
   await Promise.allSettled(alerts);
+}
+
+async function updateSlotHistory(slots) {
+  try {
+    const stored = await chrome.storage.local.get({ slotHistory: [] });
+    const merged = mergeSlotHistory(stored.slotHistory, slots);
+    await chrome.storage.local.set({ slotHistory: merged });
+    logger.info("Slot history updated", {
+      event: "slot-history-updated",
+      added: slots.length,
+      total: merged.length,
+    });
+  } catch (error) {
+    logger.warn("Slot history update failed", {
+      event: "slot-history-update-failed",
+      message: String(error?.message || error || ""),
+    });
+  }
 }
 
 async function createNotification() {
