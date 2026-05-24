@@ -285,11 +285,20 @@ clearHistoryButton.addEventListener("click", async () => {
 });
 
 function setHistoryEntries(entries) {
-  historyEntries = entries
-    .slice()
-    .sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
+  historyEntries = entries.slice().sort((a, b) => {
+    const dateA = parseSlotDate(a.text);
+    const dateB = parseSlotDate(b.text);
+    if (dateA && dateB && dateA !== dateB) return dateB.localeCompare(dateA);
+    return b.lastSeen.localeCompare(a.lastSeen);
+  });
   historyVisible = HISTORY_LOAD_SIZE;
   renderHistory();
+}
+
+function parseSlotDate(text) {
+  const match = text.match(/(\d{1,2})\.(\d{1,2})\./);
+  if (!match) return "";
+  return `${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`;
 }
 
 function renderHistory() {
@@ -305,12 +314,16 @@ function renderHistory() {
   const hasMore = historyVisible < total;
 
   const items = visible
-    .map(
-      (entry) => `<div role="listitem" class="history-item">
-        <span class="history-item-text">${escapeHtml(entry.text)}</span>
+    .map((entry) => {
+      const text = entry.text
+        .replace(/\bUusi\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      return `<div role="listitem" class="history-item">
+        <span class="history-item-text">${escapeHtml(text)}</span>
         <span class="history-item-meta">Nähty ${formatTimestamp(entry.lastSeen)}</span>
-      </div>`
-    )
+      </div>`;
+    })
     .join("");
 
   const loadMore = hasMore
