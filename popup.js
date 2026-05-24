@@ -305,17 +305,12 @@ function renderHistory() {
   const hasMore = historyVisible < total;
 
   const items = visible
-    .map((entry) => {
-      const lastSeen = formatTimestamp(entry.lastSeen);
-      const meta =
-        entry.firstSeen !== entry.lastSeen
-          ? `Nähty viimeksi ${lastSeen} · Ensin ${formatTimestamp(entry.firstSeen)}`
-          : `Nähty ${lastSeen}`;
-      return `<div role="listitem" class="history-item">
+    .map(
+      (entry) => `<div role="listitem" class="history-item">
         <span class="history-item-text">${escapeHtml(entry.text)}</span>
-        <span class="history-item-meta">${meta}</span>
-      </div>`;
-    })
+        <span class="history-item-meta">Nähty ${formatTimestamp(entry.lastSeen)}</span>
+      </div>`
+    )
     .join("");
 
   const loadMore = hasMore

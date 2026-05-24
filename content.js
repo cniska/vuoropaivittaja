@@ -213,7 +213,15 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const list = document.querySelector(listSelector);
     if (!list) return [];
     const items = Array.from(list.querySelectorAll('[role="listitem"]'));
-    return items.map((item) => item.innerText.trim()).filter(Boolean);
+    return items
+      .map((item) =>
+        item.innerText
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line && line !== "Uusi")
+          .join(" ")
+      )
+      .filter(Boolean);
   }
 
   function detectListSelector(selector) {
