@@ -10,7 +10,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     looksLikeXPath,
     isStableIdentifier,
   } = globalThis.VuoropaivittajaShared;
-  const { shouldStartMonitoring, snapshotsAreEqual } =
+  const { shouldStartMonitoring, snapshotsAreEqual, parseSlotText } =
     globalThis.VuoropaivittajaContentHelpers;
 
   let lastUrl = location.href;
@@ -214,17 +214,6 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     if (!list) return [];
     const items = Array.from(list.querySelectorAll('[role="listitem"]'));
     return items.map((item) => parseSlotText(item.innerText)).filter(Boolean);
-  }
-
-  function parseSlotText(raw) {
-    const date = (raw.match(/\d{1,2}\.\d{1,2}\.(\d{4})?/) || [])[0] || "";
-    const dow =
-      (raw.match(
-        /Maanantai|Tiistai|Keskiviikko|Torstai|Perjantai|Lauantai|Sunnuntai|\bMa\b|\bTi\b|\bKe\b|\bTo\b|\bPe\b|\bLa\b|\bSu\b/
-      ) || [])[0] || "";
-    const time =
-      (raw.match(/\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}/) || [])[0] || "";
-    return [dow, date, time].filter(Boolean).join(" ").trim();
   }
 
   function detectListSelector(selector) {

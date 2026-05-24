@@ -21,9 +21,21 @@
     return true;
   }
 
+  function parseSlotText(raw) {
+    const date = (raw.match(/\d{1,2}\.\d{1,2}\.(\d{4})?/) || [])[0] || "";
+    const dow =
+      (raw.match(
+        /Maanantai|Tiistai|Keskiviikko|Torstai|Perjantai|Lauantai|Sunnuntai|\bMa\b|\bTi\b|\bKe\b|\bTo\b|\bPe\b|\bLa\b|\bSu\b/
+      ) || [])[0] || "";
+    const time =
+      (raw.match(/\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}/) || [])[0] || "";
+    return [dow, date, time].filter(Boolean).join(" ").trim();
+  }
+
   const api = {
     shouldStartMonitoring,
     snapshotsAreEqual,
+    parseSlotText,
   };
 
   globalScope.VuoropaivittajaContentHelpers = api;
