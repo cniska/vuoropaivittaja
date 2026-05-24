@@ -78,7 +78,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     try {
       const stored = await chrome.storage.local.get({ settings: {}, rule: {} });
       const settings = normalizeSettings(stored.settings);
-      const rule = normalizeRule(stored.rule);
+      let rule = normalizeRule(stored.rule);
       debugLoggingEnabled = Boolean(settings.debugLogging);
       if (isTopFrame()) {
         logger.info("Content script initialized", {
@@ -89,8 +89,16 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         });
       }
 
+      if (rule && !rule.listSelector) {
+        const detected = detectListSelector(rule.selector);
+        if (detected) {
+          rule = { ...rule, listSelector: detected };
+          void chrome.storage.local.set({ rule }).catch(() => {});
+        }
+      }
+
       if (rule?.listSelector) {
-        const slots = takeSnapshot(rule.listSelector);
+        const slots = snapshotListItems(rule.listSelector);
         if (slots.length > 0) {
           void chrome.runtime
             .sendMessage({ type: "update-slot-history", slots })
@@ -109,12 +117,6 @@ if (!globalThis.__vuoropaivittajaLoaded) {
           rule && findElementInPage(rule.selector)
         )
       ) {
-        void ensureListSelector(rule).catch((error) => {
-          logger.warn("List selector detection failed", {
-            event: "list-selector-failed",
-            message: String(error?.message || error || ""),
-          });
-        });
         void startMonitoring(settings, rule, session).catch((error) => {
           logger.warn("Monitoring loop failed", {
             event: "monitoring-failed",
@@ -157,15 +159,6 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       listSelector: rule.listSelector,
     });
 
-    const initialSlots = rule.listSelector
-      ? takeSnapshot(rule.listSelector)
-      : [];
-    if (initialSlots.length > 0) {
-      void chrome.runtime
-        .sendMessage({ type: "update-slot-history", slots: initialSlots })
-        .catch(() => {});
-    }
-
     while (monitoringSession === session) {
       await delay(
         randomInterval(settings.minIntervalMs, settings.maxIntervalMs)
@@ -195,10 +188,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
       const after = takeSnapshot(rule.listSelector);
 
-      if (rule.listSelector && after.length > 0) {
-        void chrome.runtime
-          .sendMessage({ type: "update-slot-history", slots: after })
-          .catch(() => {});
+      if (rule.listSelector) {
+        const slots = snapshotListItems(rule.listSelector);
+        if (slots.length > 0) {
+          void chrome.runtime
+            .sendMessage({ type: "update-slot-history", slots })
+            .catch(() => {});
+        }
       }
 
       if (!snapshotsAreEqual(before, after)) {
@@ -213,11 +209,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     }
   }
 
-  async function ensureListSelector(rule) {
-    if (rule.listSelector) return;
-    const listSelector = detectListSelector(rule.selector);
-    if (!listSelector) return;
-    await chrome.storage.local.set({ rule: { ...rule, listSelector } });
+  function snapshotListItems(listSelector) {
+    const list = document.querySelector(listSelector);
+    if (!list) return [];
+    const items = Array.from(list.querySelectorAll('[role="listitem"]'));
+    return items.map((item) => item.innerText.trim()).filter(Boolean);
   }
 
   function detectListSelector(selector) {
