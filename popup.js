@@ -8,7 +8,7 @@ const DRAFT_KEY = "draftRule";
 const SLOT_HISTORY_KEY = "slotHistory";
 const MIN_INTERVAL_S = 2;
 const STATUS_DISMISS_MS = 5000;
-const HISTORY_PAGE_SIZE = 20;
+const HISTORY_LOAD_SIZE = 20;
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -22,17 +22,13 @@ const pickElementButton = document.getElementById("pick-element");
 const testSelectorButton = document.getElementById("test-selector");
 const statusEl = document.getElementById("status");
 const historyList = document.getElementById("history-list");
-const historyPagination = document.getElementById("history-pagination");
-const historyPrevButton = document.getElementById("history-prev");
-const historyNextButton = document.getElementById("history-next");
-const historyPageInfo = document.getElementById("history-page-info");
 const clearHistoryButton = document.getElementById("clear-history");
 
 let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
 let logger = createLogger("popup", () => debugLoggingInput.checked);
-let historyPage = 0;
+let historyVisible = 20;
 let historyEntries = [];
 
 void initialize();
@@ -278,21 +274,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
 });
 
-historyPrevButton.addEventListener("click", () => {
-  if (historyPage > 0) {
-    historyPage -= 1;
-    renderHistory();
-  }
-});
-
-historyNextButton.addEventListener("click", () => {
-  const totalPages = Math.ceil(historyEntries.length / HISTORY_PAGE_SIZE);
-  if (historyPage < totalPages - 1) {
-    historyPage += 1;
-    renderHistory();
-  }
-});
-
 clearHistoryButton.addEventListener("click", async () => {
   if (!window.confirm("Tyhjennetäänkö koko vuorohistoria?")) return;
   try {
@@ -307,26 +288,23 @@ function setHistoryEntries(entries) {
   historyEntries = entries
     .slice()
     .sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
-  historyPage = 0;
+  historyVisible = HISTORY_LOAD_SIZE;
   renderHistory();
 }
 
 function renderHistory() {
   const total = historyEntries.length;
-  const totalPages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE));
-  historyPage = Math.min(historyPage, totalPages - 1);
-
-  const start = historyPage * HISTORY_PAGE_SIZE;
-  const page = historyEntries.slice(start, start + HISTORY_PAGE_SIZE);
 
   if (total === 0) {
     historyList.innerHTML =
       '<p class="history-empty">Ei tallennettuja vuoroja.</p>';
-    historyPagination.hidden = true;
     return;
   }
 
-  historyList.innerHTML = page
+  const visible = historyEntries.slice(0, historyVisible);
+  const hasMore = historyVisible < total;
+
+  const items = visible
     .map((entry) => {
       const lastSeen = formatTimestamp(entry.lastSeen);
       const meta =
@@ -340,10 +318,20 @@ function renderHistory() {
     })
     .join("");
 
-  historyPagination.hidden = totalPages <= 1;
-  historyPageInfo.textContent = `${historyPage + 1} / ${totalPages}`;
-  historyPrevButton.disabled = historyPage === 0;
-  historyNextButton.disabled = historyPage >= totalPages - 1;
+  const loadMore = hasMore
+    ? `<button type="button" class="history-load-more" id="history-load-more">Lataa lisää (${total - historyVisible})</button>`
+    : "";
+
+  historyList.innerHTML = items + loadMore;
+
+  if (hasMore) {
+    document
+      .getElementById("history-load-more")
+      .addEventListener("click", () => {
+        historyVisible += HISTORY_LOAD_SIZE;
+        renderHistory();
+      });
+  }
 }
 
 function formatTimestamp(iso) {

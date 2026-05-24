@@ -82,19 +82,13 @@
       </main>
 
       <aside class="column-right" aria-labelledby="history-heading">
-        <div class="history-header">
-          <h2 id="history-heading" class="section-label">Vuorot</h2>
-          <button id="clear-history" type="button" class="ghost-button" aria-label="Tyhjennä vuorohistoria">Tyhjennä</button>
-        </div>
+        <header class="header">
+          <h2 id="history-heading" class="app-name">Vuorot</h2>
+          <button id="clear-history" type="button" class="header-action" aria-label="Tyhjennä vuorohistoria">Tyhjennä</button>
+        </header>
 
         <div id="history-list" class="history-list" role="list" aria-live="polite" aria-relevant="additions removals">
           <p class="history-empty">Ei tallennettuja vuoroja.</p>
-        </div>
-
-        <div id="history-pagination" class="history-pagination" aria-label="Sivutus" hidden>
-          <button id="history-prev" type="button" class="ghost-button" aria-label="Edellinen sivu">&#8592;</button>
-          <span id="history-page-info" class="history-page-info"></span>
-          <button id="history-next" type="button" class="ghost-button" aria-label="Seuraava sivu">&#8594;</button>
         </div>
       </aside>
 

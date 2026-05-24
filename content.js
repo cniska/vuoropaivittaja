@@ -147,6 +147,16 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       selector: rule.selector,
       listSelector: rule.listSelector,
     });
+
+    const initialSlots = rule.listSelector
+      ? takeSnapshot(rule.listSelector)
+      : [];
+    if (initialSlots.length > 0) {
+      void chrome.runtime
+        .sendMessage({ type: "update-slot-history", slots: initialSlots })
+        .catch(() => {});
+    }
+
     while (monitoringSession === session) {
       await delay(
         randomInterval(settings.minIntervalMs, settings.maxIntervalMs)
@@ -175,6 +185,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (monitoringSession !== session) break;
 
       const after = takeSnapshot(rule.listSelector);
+
+      if (rule.listSelector && after.length > 0) {
+        void chrome.runtime
+          .sendMessage({ type: "update-slot-history", slots: after })
+          .catch(() => {});
+      }
+
       if (!snapshotsAreEqual(before, after)) {
         logger.info("Snapshot change detected", {
           event: "change-detected",
@@ -182,8 +199,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
           notifications: settings.notifications,
           sound: settings.sound,
         });
-        const slots = rule.listSelector && after.length > 0 ? after : [];
-        fireChangeNotification(settings, slots);
+        fireChangeNotification(settings);
       }
     }
   }
@@ -247,18 +263,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function fireChangeNotification(settings, slots = []) {
+  function fireChangeNotification(settings) {
     logger.info("Alert sent to background", {
       event: "alert-dispatched",
       notifications: settings.notifications,
       sound: settings.sound,
-      slots: slots.length,
     });
-    const message = buildChangeAlertMessage(settings);
-    if (slots.length > 0) {
-      message.slots = slots;
-    }
-    void chrome.runtime.sendMessage(message);
+    void chrome.runtime.sendMessage(buildChangeAlertMessage(settings));
   }
 
   function patchHistoryMethod(methodName) {

@@ -66,6 +66,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (message?.type === "update-slot-history") {
+    if (Array.isArray(message.slots) && message.slots.length > 0) {
+      void updateSlotHistory(message.slots);
+    }
+    return false;
+  }
+
   if (message?.type === "should-monitor-tab") {
     const settings = normalizeSettings(message.settings);
     const rule = normalizeRule(message.rule);
@@ -134,10 +141,6 @@ async function fireChangeAlert(message) {
 
   if (message.sound) {
     alerts.push(playAlertSound());
-  }
-
-  if (Array.isArray(message.slots) && message.slots.length > 0) {
-    alerts.push(updateSlotHistory(message.slots));
   }
 
   await Promise.allSettled(alerts);

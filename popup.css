@@ -58,6 +58,8 @@ body {
 .header {
   padding: 11px 16px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
 }
 
 .app-name {
@@ -65,7 +67,19 @@ body {
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--muted);
+  flex: 1;
 }
+
+.header-action {
+  background: transparent;
+  color: var(--muted);
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: inherit;
+  border-radius: var(--radius);
+}
+.header-action:hover { color: var(--text); }
 
 .section {
   padding: 14px 16px;
@@ -293,21 +307,11 @@ button:disabled { opacity: 0.45; cursor: default; }
 
 /* Slot history column */
 
-.history-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 11px 12px 11px 14px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
 .history-list {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .history-empty {
@@ -336,16 +340,15 @@ button:disabled { opacity: 0.45; cursor: default; }
   color: var(--muted);
 }
 
-.history-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
+.history-load-more {
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
   border-top: 1px solid var(--border);
-  flex-shrink: 0;
 }
-
-.history-page-info {
-  font-size: 11px;
-  color: var(--muted);
-}
+.history-load-more:hover { background: var(--border); }
