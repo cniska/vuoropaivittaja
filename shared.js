@@ -143,11 +143,42 @@
     );
   }
 
+  const SLOT_HISTORY_CAP = 500;
+
+  function mergeSlotHistory(existing, newLines, cap = SLOT_HISTORY_CAP) {
+    const base = Array.isArray(existing) ? existing : [];
+    if (!Array.isArray(newLines) || newLines.length === 0) return base;
+
+    const now = new Date().toISOString();
+    const byText = new Map(base.map((e) => [e.text, { ...e }]));
+
+    for (const line of newLines) {
+      const text = String(line || "").trim();
+      if (!text) continue;
+
+      if (byText.has(text)) {
+        byText.get(text).lastSeen = now;
+      } else {
+        byText.set(text, { text, firstSeen: now, lastSeen: now });
+      }
+    }
+
+    let merged = Array.from(byText.values());
+
+    if (merged.length > cap) {
+      merged.sort((a, b) => a.firstSeen.localeCompare(b.firstSeen));
+      merged = merged.slice(merged.length - cap);
+    }
+
+    return merged;
+  }
+
   const api = {
     normalizeSettings,
     normalizeRule,
     shouldMonitorTab,
     buildChangeAlertMessage,
+    mergeSlotHistory,
     createLogger,
     urlMatches,
     looksLikeXPath,

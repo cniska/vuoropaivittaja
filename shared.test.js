@@ -6,6 +6,7 @@ const {
   normalizeRule,
   shouldMonitorTab,
   buildChangeAlertMessage,
+  mergeSlotHistory,
   urlMatches,
   looksLikeXPath,
   isStableIdentifier,
@@ -250,6 +251,62 @@ test("looksLikeXPath detects common XPath formats", () => {
   assert.equal(looksLikeXPath("//button[@type='button']"), true);
   assert.equal(looksLikeXPath("./div/button"), true);
   assert.equal(looksLikeXPath("button[aria-label='Päivitä luettelo']"), false);
+});
+
+// mergeSlotHistory
+
+test("mergeSlotHistory returns empty array for empty inputs", () => {
+  assert.deepEqual(mergeSlotHistory([], []), []);
+  assert.deepEqual(mergeSlotHistory(null, []), []);
+  assert.deepEqual(mergeSlotHistory([], null), []);
+});
+
+test("mergeSlotHistory adds new slot lines with firstSeen and lastSeen", () => {
+  const result = mergeSlotHistory([], ["Ma 26.5 aamu", "Ti 27.5 ilta"]);
+  assert.equal(result.length, 2);
+  assert.equal(result[0].text, "Ma 26.5 aamu");
+  assert.ok(result[0].firstSeen);
+  assert.equal(result[0].firstSeen, result[0].lastSeen);
+});
+
+test("mergeSlotHistory de-duplicates by text and updates lastSeen", () => {
+  const firstSeen = "2026-01-01T00:00:00.000Z";
+  const existing = [{ text: "Ma 26.5 aamu", firstSeen, lastSeen: firstSeen }];
+  const result = mergeSlotHistory(existing, ["Ma 26.5 aamu"]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].firstSeen, firstSeen);
+  assert.ok(result[0].lastSeen > firstSeen);
+});
+
+test("mergeSlotHistory does not add duplicates when same line appears multiple times in newLines", () => {
+  const result = mergeSlotHistory([], ["Ma 26.5 aamu", "Ma 26.5 aamu"]);
+  assert.equal(result.length, 1);
+});
+
+test("mergeSlotHistory skips blank lines", () => {
+  const result = mergeSlotHistory([], ["Ma 26.5 aamu", "", "  "]);
+  assert.equal(result.length, 1);
+});
+
+test("mergeSlotHistory enforces cap by dropping oldest firstSeen entries", () => {
+  const existing = Array.from({ length: 5 }, (_, i) => ({
+    text: `Slot ${i}`,
+    firstSeen: `2026-01-0${i + 1}T00:00:00.000Z`,
+    lastSeen: `2026-01-0${i + 1}T00:00:00.000Z`,
+  }));
+  const result = mergeSlotHistory(existing, ["New slot"], 5);
+  assert.equal(result.length, 5);
+  assert.ok(result.every((e) => e.text !== "Slot 0"));
+  assert.ok(result.some((e) => e.text === "New slot"));
+});
+
+test("mergeSlotHistory does not mutate the existing array", () => {
+  const existing = [
+    { text: "Ma 26.5 aamu", firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z" },
+  ];
+  const original = JSON.stringify(existing);
+  mergeSlotHistory(existing, ["Ma 26.5 aamu"]);
+  assert.equal(JSON.stringify(existing), original);
 });
 
 // isStableIdentifier
