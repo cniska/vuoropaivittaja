@@ -56,11 +56,18 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       }
 
       const result = clickSelectorInPage(selector);
-      sendResponse(
-        result.clicked
-          ? { ok: true, message: "Painike klikattu onnistuneesti." }
-          : { ok: false, error: result.message }
-      );
+      if (result.clicked) {
+        sendResponse({ ok: true, message: "Painike klikattu onnistuneesti." });
+        return false;
+      }
+      if (isTopFrame()) {
+        // Delay lets frames that found the element respond first.
+        window.setTimeout(
+          () => sendResponse({ ok: false, error: result.message }),
+          300
+        );
+        return true;
+      }
       return false;
     }
 
