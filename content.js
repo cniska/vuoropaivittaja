@@ -89,6 +89,15 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         });
       }
 
+      if (rule?.listSelector) {
+        const slots = takeSnapshot(rule.listSelector);
+        if (slots.length > 0) {
+          void chrome.runtime
+            .sendMessage({ type: "update-slot-history", slots })
+            .catch(() => {});
+        }
+      }
+
       monitoringSession += 1;
       const session = monitoringSession;
 
