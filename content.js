@@ -182,7 +182,8 @@ if (!globalThis.__vuoropaivittajaLoaded) {
           notifications: settings.notifications,
           sound: settings.sound,
         });
-        fireChangeNotification(settings);
+        const slots = rule.listSelector && after.length > 0 ? after : [];
+        fireChangeNotification(settings, slots);
       }
     }
   }
@@ -246,13 +247,18 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function fireChangeNotification(settings) {
+  function fireChangeNotification(settings, slots = []) {
     logger.info("Alert sent to background", {
       event: "alert-dispatched",
       notifications: settings.notifications,
       sound: settings.sound,
+      slots: slots.length,
     });
-    void chrome.runtime.sendMessage(buildChangeAlertMessage(settings));
+    const message = buildChangeAlertMessage(settings);
+    if (slots.length > 0) {
+      message.slots = slots;
+    }
+    void chrome.runtime.sendMessage(message);
   }
 
   function patchHistoryMethod(methodName) {
