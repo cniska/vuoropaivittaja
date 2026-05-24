@@ -314,16 +314,12 @@ function renderHistory() {
   const hasMore = historyVisible < total;
 
   const items = visible
-    .map((entry) => {
-      const text = entry.text
-        .replace(/\bUusi\b/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      return `<div role="listitem" class="history-item">
-        <span class="history-item-text">${escapeHtml(text)}</span>
+    .map(
+      (entry) => `<div role="listitem" class="history-item">
+        <span class="history-item-text">${escapeHtml(entry.text)}</span>
         <span class="history-item-meta">Nähty ${formatTimestamp(entry.lastSeen)}</span>
-      </div>`;
-    })
+      </div>`
+    )
     .join("");
 
   const loadMore = hasMore
