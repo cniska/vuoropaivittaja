@@ -262,50 +262,68 @@ test("mergeSlotHistory returns empty array for empty inputs", () => {
 });
 
 test("mergeSlotHistory adds new slot lines with firstSeen and lastSeen", () => {
-  const result = mergeSlotHistory([], ["Ma 26.5 aamu", "Ti 27.5 ilta"]);
+  const slotA = "Ma\n26.5.\n08:00–16:00";
+  const slotB = "Ti\n27.5.\n12:00–20:00";
+  const result = mergeSlotHistory([], [slotA, slotB]);
   assert.equal(result.length, 2);
-  assert.equal(result[0].text, "Ma 26.5 aamu");
+  assert.equal(result[0].text, slotA);
   assert.ok(result[0].firstSeen);
   assert.equal(result[0].firstSeen, result[0].lastSeen);
 });
 
 test("mergeSlotHistory de-duplicates by text and updates lastSeen", () => {
+  const slotA = "Ma\n26.5.\n08:00–16:00";
   const firstSeen = "2026-01-01T00:00:00.000Z";
-  const existing = [{ text: "Ma 26.5 aamu", firstSeen, lastSeen: firstSeen }];
-  const result = mergeSlotHistory(existing, ["Ma 26.5 aamu"]);
+  const existing = [{ text: slotA, firstSeen, lastSeen: firstSeen }];
+  const result = mergeSlotHistory(existing, [slotA]);
   assert.equal(result.length, 1);
   assert.equal(result[0].firstSeen, firstSeen);
   assert.ok(result[0].lastSeen > firstSeen);
 });
 
 test("mergeSlotHistory does not add duplicates when same line appears multiple times in newLines", () => {
-  const result = mergeSlotHistory([], ["Ma 26.5 aamu", "Ma 26.5 aamu"]);
+  const slot = "La\n31.5.\nUusi\n09:00–15:00";
+  const result = mergeSlotHistory([], [slot, slot]);
   assert.equal(result.length, 1);
 });
 
 test("mergeSlotHistory skips blank lines", () => {
-  const result = mergeSlotHistory([], ["Ma 26.5 aamu", "", "  "]);
+  const slot = "Ke\n28.5.\n06:00–14:00";
+  const result = mergeSlotHistory([], [slot, "", "  "]);
   assert.equal(result.length, 1);
 });
 
 test("mergeSlotHistory enforces cap by dropping oldest firstSeen entries", () => {
-  const existing = Array.from({ length: 5 }, (_, i) => ({
-    text: `Slot ${i}`,
+  const shifts = [
+    "06:00–14:00",
+    "08:00–16:00",
+    "12:00–20:00",
+    "14:00–22:00",
+    "16:00–00:00",
+  ];
+  const existing = shifts.map((shift, i) => ({
+    text: `Ma\n2${i + 1}.5.\n${shift}`,
     firstSeen: `2026-01-0${i + 1}T00:00:00.000Z`,
     lastSeen: `2026-01-0${i + 1}T00:00:00.000Z`,
   }));
-  const result = mergeSlotHistory(existing, ["New slot"], 5);
+  const newSlot = "La\n31.5.\nUusi\n09:00–15:00";
+  const result = mergeSlotHistory(existing, [newSlot], 5);
   assert.equal(result.length, 5);
-  assert.ok(result.every((e) => e.text !== "Slot 0"));
-  assert.ok(result.some((e) => e.text === "New slot"));
+  assert.ok(result.every((e) => e.text !== existing[0].text));
+  assert.ok(result.some((e) => e.text === newSlot));
 });
 
 test("mergeSlotHistory does not mutate the existing array", () => {
+  const slot = "Ma\n26.5.\n08:00–16:00";
   const existing = [
-    { text: "Ma 26.5 aamu", firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z" },
+    {
+      text: slot,
+      firstSeen: "2026-01-01T00:00:00.000Z",
+      lastSeen: "2026-01-01T00:00:00.000Z",
+    },
   ];
   const original = JSON.stringify(existing);
-  mergeSlotHistory(existing, ["Ma 26.5 aamu"]);
+  mergeSlotHistory(existing, [slot]);
   assert.equal(JSON.stringify(existing), original);
 });
 

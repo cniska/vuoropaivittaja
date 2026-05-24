@@ -5,8 +5,10 @@ const SETTINGS_KEY = "settings";
 const RULE_KEY = "rule";
 const PICK_RESULT_KEY = "lastPickedElement";
 const DRAFT_KEY = "draftRule";
+const SLOT_HISTORY_KEY = "slotHistory";
 const MIN_INTERVAL_S = 2;
 const STATUS_DISMISS_MS = 5000;
+const HISTORY_PAGE_SIZE = 20;
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -19,11 +21,19 @@ const selectorInput = document.getElementById("selector");
 const pickElementButton = document.getElementById("pick-element");
 const testSelectorButton = document.getElementById("test-selector");
 const statusEl = document.getElementById("status");
+const historyList = document.getElementById("history-list");
+const historyPagination = document.getElementById("history-pagination");
+const historyPrevButton = document.getElementById("history-prev");
+const historyNextButton = document.getElementById("history-next");
+const historyPageInfo = document.getElementById("history-page-info");
+const clearHistoryButton = document.getElementById("clear-history");
 
 let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
 let logger = createLogger("popup", () => debugLoggingInput.checked);
+let historyPage = 0;
+let historyEntries = [];
 
 void initialize();
 
@@ -48,11 +58,16 @@ async function initialize() {
   const stored = await chrome.storage.local.get({
     [SETTINGS_KEY]: {},
     [RULE_KEY]: {},
+    [SLOT_HISTORY_KEY]: [],
   });
 
   fillSettings(normalizeSettings(stored[SETTINGS_KEY]));
   fillRule(normalizeRule(stored[RULE_KEY]));
   logger = createLogger("popup", () => debugLoggingInput.checked);
+
+  setHistoryEntries(
+    Array.isArray(stored[SLOT_HISTORY_KEY]) ? stored[SLOT_HISTORY_KEY] : []
+  );
 
   await loadDraft();
   await loadPickedElement();
@@ -254,6 +269,102 @@ async function loadPickedElement() {
   await autosaveRule(false);
   await chrome.storage.local.remove(PICK_RESULT_KEY);
   setStatus("Painike valittu sivulta.");
+}
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local" && changes[SLOT_HISTORY_KEY]) {
+    const next = changes[SLOT_HISTORY_KEY].newValue;
+    setHistoryEntries(Array.isArray(next) ? next : []);
+  }
+});
+
+historyPrevButton.addEventListener("click", () => {
+  if (historyPage > 0) {
+    historyPage -= 1;
+    renderHistory();
+  }
+});
+
+historyNextButton.addEventListener("click", () => {
+  const totalPages = Math.ceil(historyEntries.length / HISTORY_PAGE_SIZE);
+  if (historyPage < totalPages - 1) {
+    historyPage += 1;
+    renderHistory();
+  }
+});
+
+clearHistoryButton.addEventListener("click", async () => {
+  if (!window.confirm("Tyhjennetäänkö koko vuorohistoria?")) return;
+  try {
+    await chrome.storage.local.set({ [SLOT_HISTORY_KEY]: [] });
+    setHistoryEntries([]);
+  } catch {
+    setStatus("Historian tyhjennys epäonnistui.", true);
+  }
+});
+
+function setHistoryEntries(entries) {
+  historyEntries = entries
+    .slice()
+    .sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
+  historyPage = 0;
+  renderHistory();
+}
+
+function renderHistory() {
+  const total = historyEntries.length;
+  const totalPages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE));
+  historyPage = Math.min(historyPage, totalPages - 1);
+
+  const start = historyPage * HISTORY_PAGE_SIZE;
+  const page = historyEntries.slice(start, start + HISTORY_PAGE_SIZE);
+
+  if (total === 0) {
+    historyList.innerHTML =
+      '<p class="history-empty">Ei tallennettuja vuoroja.</p>';
+    historyPagination.hidden = true;
+    return;
+  }
+
+  historyList.innerHTML = page
+    .map((entry) => {
+      const lastSeen = formatTimestamp(entry.lastSeen);
+      const meta =
+        entry.firstSeen !== entry.lastSeen
+          ? `Nähty viimeksi ${lastSeen} · Ensin ${formatTimestamp(entry.firstSeen)}`
+          : `Nähty ${lastSeen}`;
+      return `<div role="listitem" class="history-item">
+        <span class="history-item-text">${escapeHtml(entry.text)}</span>
+        <span class="history-item-meta">${meta}</span>
+      </div>`;
+    })
+    .join("");
+
+  historyPagination.hidden = totalPages <= 1;
+  historyPageInfo.textContent = `${historyPage + 1} / ${totalPages}`;
+  historyPrevButton.disabled = historyPage === 0;
+  historyNextButton.disabled = historyPage >= totalPages - 1;
+}
+
+function formatTimestamp(iso) {
+  try {
+    return new Date(iso).toLocaleString("fi-FI", {
+      day: "numeric",
+      month: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 async function sendToActiveTab(message, options = {}) {
