@@ -256,8 +256,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       const list = document.querySelector(listSelector);
       if (list) {
         const items = Array.from(list.querySelectorAll('[role="listitem"]'));
-        if (items.length > 0) {
-          return items.map((item) => item.innerText);
+        const parsed = items
+          .map((item) => parseSlotText(item.innerText))
+          .filter(Boolean);
+        if (parsed.length > 0) {
+          return parsed;
         }
       }
     }
