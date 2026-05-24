@@ -213,15 +213,18 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     const list = document.querySelector(listSelector);
     if (!list) return [];
     const items = Array.from(list.querySelectorAll('[role="listitem"]'));
-    return items
-      .map((item) =>
-        item.innerText
-          .split("\n")
-          .map((line) => line.trim())
-          .filter((line) => line && line !== "Uusi")
-          .join(" ")
-      )
-      .filter(Boolean);
+    return items.map((item) => parseSlotText(item.innerText)).filter(Boolean);
+  }
+
+  function parseSlotText(raw) {
+    const date = (raw.match(/\d{1,2}\.\d{1,2}\.(\d{4})?/) || [])[0] || "";
+    const dow =
+      (raw.match(
+        /Maanantai|Tiistai|Keskiviikko|Torstai|Perjantai|Lauantai|Sunnuntai|\bMa\b|\bTi\b|\bKe\b|\bTo\b|\bPe\b|\bLa\b|\bSu\b/
+      ) || [])[0] || "";
+    const time =
+      (raw.match(/\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}/) || [])[0] || "";
+    return [dow, date, time].filter(Boolean).join(" ").trim();
   }
 
   function detectListSelector(selector) {
