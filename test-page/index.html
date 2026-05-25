@@ -110,21 +110,18 @@
 
       .slot-date { color: #64748b; }
       .slot-weekday { font-weight: 500; }
-      .slot-time { }
-      .slot-badge {
-        display: inline-block;
-        margin-left: 8px;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #15803d;
-        background: #f0fdf4;
-        border-radius: 4px;
-        padding: 1px 5px;
+
+      @keyframes flashGreen {
+        0%   { background: rgba(21, 128, 61, 0.14); }
+        100% { background: transparent; }
+      }
+      @keyframes flashRed {
+        0%   { background: rgba(185, 28, 28, 0.1); opacity: 1; }
+        100% { background: transparent; opacity: 0; }
       }
 
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      .slot-item--added   { animation: flashGreen 1s ease; }
+      .slot-item--removing { animation: flashRed 0.6s ease forwards; }
 
       .empty-state {
         padding: 32px 16px;
@@ -220,6 +217,8 @@
       // 1 in 3 refreshes removes a slot
       const REMOVAL_PATTERN = [false, false, true];
 
+      const FLASH_MS = 600;
+
       const visibleSlots = INITIAL_SLOTS.map((s) => ({ ...s }));
       const pendingSlots = [];
       let arrivalIndex = 0;
@@ -235,13 +234,16 @@
           return;
         }
         list.innerHTML = visibleSlots
-          .map(
-            (s) => `<div role="listitem" class="slot-item">
+          .map((s) => {
+            const cls = s.isNew ? "slot-item slot-item--added"
+              : s.isRemoving ? "slot-item slot-item--removing"
+              : "slot-item";
+            return `<div role="listitem" class="${cls}">
               <span class="slot-date">${s.date}</span>
               <span class="slot-weekday">${s.weekday}</span>
-              <span class="slot-time">${s.shift}${s.isNew ? '<span class="slot-badge">Uusi</span>' : ""}</span>
-            </div>`
-          )
+              <span class="slot-time">${s.shift}</span>
+            </div>`;
+          })
           .join("");
       }
 
@@ -271,21 +273,28 @@
 
       function handleRefresh() {
         clickCount++;
+
         if (pendingSlots.length > 0) {
           addedCount += pendingSlots.length;
-          visibleSlots.unshift(...pendingSlots);
-          pendingSlots.length = 0;
+          visibleSlots.unshift(...pendingSlots.splice(0));
         }
+
         if (REMOVAL_PATTERN[removalIndex % REMOVAL_PATTERN.length]) {
-          const oldSlots = visibleSlots.filter((s) => !s.isNew);
-          if (oldSlots.length > 0) {
-            const target = oldSlots[oldSlots.length - 1];
-            visibleSlots.splice(visibleSlots.lastIndexOf(target), 1);
+          const target = visibleSlots.filter((s) => !s.isNew && !s.isRemoving).at(-1);
+          if (target) {
+            target.isRemoving = true;
             removedCount++;
+            setTimeout(() => {
+              visibleSlots.splice(visibleSlots.indexOf(target), 1);
+              renderSlots();
+              updateStatus();
+            }, FLASH_MS);
           }
         }
         removalIndex++;
+
         renderSlots();
+        visibleSlots.forEach((s) => { s.isNew = false; });
         updateStatus();
       }
 
