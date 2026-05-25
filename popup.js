@@ -12,7 +12,7 @@ const DRAFT_KEY = "draftRule";
 const SLOT_HISTORY_KEY = "slotHistory";
 const MIN_INTERVAL_S = 2;
 const STATUS_DISMISS_MS = 5000;
-const HISTORY_LOAD_SIZE = 20;
+const HISTORY_PAGE_SIZE = 10;
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -69,6 +69,7 @@ async function initialize() {
 
   await loadDraft();
   await loadPickedElement();
+  void sendToActiveTab({ type: "snapshot-slots" }).catch(() => {});
 }
 
 enabledInput.addEventListener("change", autosaveSettings);
@@ -297,7 +298,7 @@ function setHistoryEntries(entries) {
     if (dateA && dateB && dateA !== dateB) return dateB.localeCompare(dateA);
     return b.lastSeen.localeCompare(a.lastSeen);
   });
-  historyVisible = HISTORY_LOAD_SIZE;
+  historyVisible = HISTORY_PAGE_SIZE;
   renderHistory();
 }
 
@@ -338,7 +339,7 @@ function renderHistory() {
     document
       .getElementById("history-load-more")
       .addEventListener("click", () => {
-        historyVisible += HISTORY_LOAD_SIZE;
+        historyVisible += HISTORY_PAGE_SIZE;
         renderHistory();
       });
   }

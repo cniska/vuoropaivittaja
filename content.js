@@ -45,6 +45,29 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       return false;
     }
 
+    if (message?.type === "snapshot-slots") {
+      void (async () => {
+        try {
+          const stored = await chrome.storage.local.get({ rule: {} });
+          const rule = normalizeRule(stored.rule);
+          if (rule?.listSelector) {
+            const slots = snapshotListItems(rule.listSelector);
+            if (slots.length > 0) {
+              void chrome.runtime
+                .sendMessage({
+                  type: "update-slot-history",
+                  urlPattern: rule.urlPattern,
+                  slots,
+                })
+                .catch(() => {});
+            }
+          }
+        } catch {}
+      })();
+      sendResponse({ ok: true });
+      return false;
+    }
+
     if (message?.type === "test-rule") {
       const selector = String(message.rule?.selector || "").trim();
       if (!selector) {

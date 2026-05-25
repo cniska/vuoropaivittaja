@@ -325,16 +325,15 @@ button:disabled { opacity: 0.45; cursor: default; }
   flex-direction: column;
   gap: 2px;
   padding: 8px 14px;
+  font-size: 11px;
   border-bottom: 1px solid var(--border);
 }
 
 .history-item-text {
-  font-size: 12px;
   font-weight: 500;
 }
 
 .history-item-meta {
-  font-size: 11px;
   color: var(--muted);
 }
 
