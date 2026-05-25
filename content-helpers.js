@@ -21,12 +21,17 @@
     return true;
   }
 
+  function parseDow(raw) {
+    return (
+      (raw.match(
+        /Maanantai|Tiistai|Keskiviikko|Torstai|Perjantai|Lauantai|Sunnuntai/
+      ) || [])[0] || ""
+    );
+  }
+
   function parseSlotText(raw) {
     const date = (raw.match(/\d{1,2}\.\d{1,2}\.(\d{4})?/) || [])[0] || "";
-    const dow =
-      (raw.match(
-        /Maanantai|Tiistai|Keskiviikko|Torstai|Perjantai|Lauantai|Sunnuntai|\bMa\b|\bTi\b|\bKe\b|\bTo\b|\bPe\b|\bLa\b|\bSu\b/
-      ) || [])[0] || "";
+    const dow = parseDow(raw);
     const time =
       (raw.match(/\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}/) || [])[0] || "";
     return [dow, date, time].filter(Boolean).join(" ").trim();

@@ -323,7 +323,7 @@ function renderHistory() {
   const items = visible
     .map(
       (entry) => `<div role="listitem" class="history-item">
-        <span class="history-item-text">${escapeHtml(entry.text)}</span>
+        <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
         <span class="history-item-meta">Nähty ${formatTimestamp(entry.lastSeen)}</span>
       </div>`
     )
@@ -363,6 +363,13 @@ function domainHistory(all) {
   if (!urlPattern) return [];
   const map = normalizeSlotHistoryMap(all);
   return Array.isArray(map[urlPattern]) ? map[urlPattern] : [];
+}
+
+function abbreviateDow(text) {
+  return text.replace(
+    /^(Maanantai|Tiistai|Keskiviikko|Torstai|Perjantai|Lauantai|Sunnuntai)\b/,
+    (m) => m.slice(0, 2)
+  );
 }
 
 function escapeHtml(text) {

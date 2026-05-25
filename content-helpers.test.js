@@ -24,8 +24,14 @@ test("shouldStartMonitoring accepts only fully eligible states", () => {
 // parseSlotText
 
 test("parseSlotText extracts dow, date, and time from test page format", () => {
-  assert.equal(parseSlotText("Ke\n28.5.\n06:00–14:00"), "Ke 28.5. 06:00–14:00");
-  assert.equal(parseSlotText("La\n31.5.\n09:00–15:00"), "La 31.5. 09:00–15:00");
+  assert.equal(
+    parseSlotText("Keskiviikko\n28.5.\n06:00–14:00"),
+    "Keskiviikko 28.5. 06:00–14:00"
+  );
+  assert.equal(
+    parseSlotText("Lauantai\n31.5.\n09:00–15:00"),
+    "Lauantai 31.5. 09:00–15:00"
+  );
 });
 
 test("parseSlotText extracts from PowerApps format with noise", () => {
@@ -52,11 +58,8 @@ test("parseSlotText handles all Finnish weekday names", () => {
   }
 });
 
-test("parseSlotText handles Finnish weekday abbreviations", () => {
-  const abbrs = ["Ma", "Ti", "Ke", "To", "Pe", "La", "Su"];
-  for (const abbr of abbrs) {
-    assert.ok(parseSlotText(`${abbr} 1.6. 08:00–16:00`).startsWith(abbr));
-  }
+test("parseSlotText extracts dow, date, and time without weekday name", () => {
+  assert.equal(parseSlotText("1.6. 08:00–16:00"), "1.6. 08:00–16:00");
 });
 
 test("parseSlotText returns empty string when no recognisable parts found", () => {
@@ -76,9 +79,9 @@ test("parseSlotText omits missing parts gracefully", () => {
 });
 
 test("snapshotsAreEqual compares ordered list snapshots", () => {
-  const slotA = "Ke\n28.5.\n06:00–14:00";
-  const slotB = "Ti\n27.5.\n12:00–20:00";
-  const slotC = "La\n31.5.\nUusi\n09:00–15:00";
+  const slotA = "Keskiviikko\n28.5.\n06:00–14:00";
+  const slotB = "Tiistai\n27.5.\n12:00–20:00";
+  const slotC = "Lauantai\n31.5.\nUusi\n09:00–15:00";
 
   assert.equal(snapshotsAreEqual([slotA, slotB], [slotA, slotB]), true);
   assert.equal(snapshotsAreEqual([slotA], [slotC]), false);
