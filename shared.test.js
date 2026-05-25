@@ -48,10 +48,11 @@ test("normalizeSettings respects debugLogging flag", () => {
   assert.equal(normalizeSettings({ debugLogging: false }).debugLogging, false);
 });
 
-test("normalizeSettings clamps minIntervalMs to 2000", () => {
-  assert.equal(normalizeSettings({ minIntervalMs: 500 }).minIntervalMs, 2000);
-  assert.equal(normalizeSettings({ minIntervalMs: 2000 }).minIntervalMs, 2000);
+test("normalizeSettings clamps minIntervalMs to 5000", () => {
+  assert.equal(normalizeSettings({ minIntervalMs: 500 }).minIntervalMs, 5000);
+  assert.equal(normalizeSettings({ minIntervalMs: 2000 }).minIntervalMs, 5000);
   assert.equal(normalizeSettings({ minIntervalMs: 5000 }).minIntervalMs, 5000);
+  assert.equal(normalizeSettings({ minIntervalMs: 10000 }).minIntervalMs, 10000);
 });
 
 test("normalizeSettings clamps maxIntervalMs to minIntervalMs when max < min", () => {

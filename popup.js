@@ -65,7 +65,7 @@ async function initialize() {
   fillRule(normalizeRule(stored[RULE_KEY]));
   syncDisabledState();
 
-  setHistoryEntries(domainHistory(stored[SLOT_HISTORY_KEY]), true);
+  resetHistoryEntries(domainHistory(stored[SLOT_HISTORY_KEY]));
 
   await loadDraft();
   await loadPickedElement();
@@ -298,21 +298,25 @@ clearHistoryButton.addEventListener("click", async () => {
     await chrome.storage.local.set({
       [SLOT_HISTORY_KEY]: { ...all, [urlPattern]: [] },
     });
-    setHistoryEntries([], true);
+    resetHistoryEntries();
   } catch {
     setStatus(STRINGS.clearHistoryFailed, true);
   }
 });
 
-function setHistoryEntries(entries, resetPagination = false) {
+function setHistoryEntries(entries) {
   historyEntries = entries.slice().sort((a, b) => {
     const dateA = parseSlotDate(a.text);
     const dateB = parseSlotDate(b.text);
     if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
     return a.lastSeen.localeCompare(b.lastSeen);
   });
-  if (resetPagination) historyVisible = HISTORY_PAGE_SIZE;
   renderHistory();
+}
+
+function resetHistoryEntries(entries = []) {
+  historyVisible = HISTORY_PAGE_SIZE;
+  setHistoryEntries(entries);
 }
 
 function renderHistory() {
