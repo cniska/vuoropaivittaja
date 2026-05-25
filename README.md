@@ -1,6 +1,6 @@
 # Vuoropäivittäjä
 
-Chrome extension for monitoring appointment slot lists and alerting when the visible list changes.
+Chrome extension for monitoring appointment slot lists and alerting when new slot lines appear.
 
 ## What it does
 

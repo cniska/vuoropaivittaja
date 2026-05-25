@@ -317,6 +317,23 @@ test("mergeSlotHistory skips blank lines", () => {
   assert.equal(result.length, 1);
 });
 
+test("mergeSlotHistory leaves existing entries untouched on empty snapshots", () => {
+  const slot = "Ma 26.5. 08:00–16:00";
+  const existing = [
+    {
+      text: slot,
+      firstSeen: "2026-01-01T00:00:00.000Z",
+      lastSeen: "2026-01-01T00:00:00.000Z",
+    },
+  ];
+  const original = JSON.stringify(existing);
+  const result = mergeSlotHistory(existing, []);
+
+  assert.equal(JSON.stringify(existing), original);
+  assert.equal(result, existing);
+  assert.equal(result[0].removedAt, undefined);
+});
+
 test("mergeSlotHistory enforces cap by dropping oldest firstSeen entries", () => {
   const shifts = [
     "06:00–14:00",
