@@ -74,7 +74,9 @@ async function initialize() {
 
 enabledInput.addEventListener("change", () => {
   syncDisabledState();
-  void autosaveSettings();
+  void autosaveSettings(
+    enabledInput.checked ? STRINGS.monitoringStarted : STRINGS.monitoringStopped
+  );
 });
 notificationsInput.addEventListener("change", autosaveSettings);
 soundInput.addEventListener("change", autosaveSettings);
@@ -87,7 +89,7 @@ selectorInput.addEventListener("input", () => {
   pickedFrameId = null;
 });
 
-async function autosaveSettings() {
+async function autosaveSettings(successMessage = STRINGS.saved) {
   const minSec = Math.max(
     MIN_INTERVAL_S,
     Number(minIntervalInput.value) || MIN_INTERVAL_S
@@ -112,7 +114,7 @@ async function autosaveSettings() {
       event: "autosave-settings",
       ...nextSettings,
     });
-    setStatus(STRINGS.saved);
+    setStatus(successMessage);
   } catch (error) {
     logger.error("Settings save failed", {
       event: "autosave-settings-failed",

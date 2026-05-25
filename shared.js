@@ -190,6 +190,8 @@
   const STRINGS = {
     // Toasts
     saved: "Tallennettu.",
+    monitoringStarted: "Seuranta käynnistetty.",
+    monitoringStopped: "Seuranta pysäytetty.",
     saveFailed: "Tallennus epäonnistui.",
     openTargetFirst: "Avaa kohdesivusto ensin.",
     pickerFailed:
