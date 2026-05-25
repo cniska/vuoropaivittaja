@@ -6,6 +6,8 @@ const {
   parseSlotDate,
   STRINGS,
 } = globalThis.VuoropaivittajaShared;
+const { sortSlotHistoryEntries, getNewHistoryFlashKeys } =
+  globalThis.VuoropaivittajaPopupHelpers;
 
 const SETTINGS_KEY = "settings";
 const RULE_KEY = "rule";
@@ -33,6 +35,7 @@ let pickedFrameId = null;
 let statusTimer = null;
 let historyEntries = [];
 const historyFlashKeys = new Set();
+let historyHasRenderedOnce = false;
 
 void initialize();
 
@@ -319,27 +322,22 @@ historyList.addEventListener("click", async (e) => {
 });
 
 function setHistoryEntries(entries) {
-  const previousKeys = new Set(historyEntries.map(historyEntryKey));
-  historyEntries = entries.slice().sort((a, b) => {
-    if (a.firstSeen !== b.firstSeen) {
-      return b.firstSeen.localeCompare(a.firstSeen);
-    }
-    const dateA = parseSlotDate(a.text);
-    const dateB = parseSlotDate(b.text);
-    if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
-    return a.lastSeen.localeCompare(b.lastSeen);
-  });
-  const nextKeys = new Set(historyEntries.map(historyEntryKey));
-  for (const entry of historyEntries) {
-    const key = historyEntryKey(entry);
-    if (!previousKeys.has(key) && nextKeys.has(key)) {
-      historyFlashKeys.add(key);
-      window.setTimeout(() => {
-        historyFlashKeys.delete(key);
-        renderHistory();
-      }, 1200);
-    }
+  const previousEntries = historyEntries;
+  historyEntries = sortSlotHistoryEntries(entries, parseSlotDate);
+  const flashKeys = getNewHistoryFlashKeys(
+    previousEntries,
+    historyEntries,
+    historyHasRenderedOnce
+  );
+  historyFlashKeys.clear();
+  for (const key of flashKeys) {
+    historyFlashKeys.add(key);
+    window.setTimeout(() => {
+      historyFlashKeys.delete(key);
+      renderHistory();
+    }, 1200);
   }
+  historyHasRenderedOnce = true;
   renderHistory();
 }
 
@@ -392,10 +390,6 @@ function domainHistory(all) {
   if (!urlPattern) return [];
   const map = normalizeSlotHistoryMap(all);
   return Array.isArray(map[urlPattern]) ? map[urlPattern] : [];
-}
-
-function historyEntryKey(entry) {
-  return `${String(entry.firstSeen || "")}::${String(entry.text || "")}`;
 }
 
 function abbreviateDow(text) {
