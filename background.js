@@ -67,8 +67,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "update-slot-history") {
-    if (Array.isArray(message.slots) && message.slots.length > 0) {
-      void updateSlotHistory(message.slots);
+    if (
+      Array.isArray(message.slots) &&
+      message.slots.length > 0 &&
+      message.urlPattern
+    ) {
+      void updateSlotHistory(message.urlPattern, message.slots);
     }
     return false;
   }
@@ -146,13 +150,23 @@ async function fireChangeAlert(message) {
   await Promise.allSettled(alerts);
 }
 
-async function updateSlotHistory(slots) {
+async function updateSlotHistory(urlPattern, slots) {
   try {
-    const stored = await chrome.storage.local.get({ slotHistory: [] });
-    const merged = mergeSlotHistory(stored.slotHistory, slots);
-    await chrome.storage.local.set({ slotHistory: merged });
+    const stored = await chrome.storage.local.get({ slotHistory: {} });
+    const all =
+      stored.slotHistory !== null &&
+      typeof stored.slotHistory === "object" &&
+      !Array.isArray(stored.slotHistory)
+        ? stored.slotHistory
+        : {};
+    const existing = Array.isArray(all[urlPattern]) ? all[urlPattern] : [];
+    const merged = mergeSlotHistory(existing, slots);
+    await chrome.storage.local.set({
+      slotHistory: { ...all, [urlPattern]: merged },
+    });
     logger.info("Slot history updated", {
       event: "slot-history-updated",
+      urlPattern,
       added: slots.length,
       total: merged.length,
     });

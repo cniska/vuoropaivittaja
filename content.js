@@ -108,7 +108,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         const slots = snapshotListItems(rule.listSelector);
         if (slots.length > 0) {
           void chrome.runtime
-            .sendMessage({ type: "update-slot-history", slots })
+            .sendMessage({
+              type: "update-slot-history",
+              urlPattern: rule.urlPattern,
+              slots,
+            })
             .catch(() => {});
         }
       }
@@ -199,7 +203,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         const slots = snapshotListItems(rule.listSelector);
         if (slots.length > 0) {
           void chrome.runtime
-            .sendMessage({ type: "update-slot-history", slots })
+            .sendMessage({
+              type: "update-slot-history",
+              urlPattern: rule.urlPattern,
+              slots,
+            })
             .catch(() => {});
         }
       }

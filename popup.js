@@ -54,16 +54,14 @@ async function initialize() {
   const stored = await chrome.storage.local.get({
     [SETTINGS_KEY]: {},
     [RULE_KEY]: {},
-    [SLOT_HISTORY_KEY]: [],
+    [SLOT_HISTORY_KEY]: {},
   });
 
   fillSettings(normalizeSettings(stored[SETTINGS_KEY]));
   fillRule(normalizeRule(stored[RULE_KEY]));
   logger = createLogger("popup", () => debugLoggingInput.checked);
 
-  setHistoryEntries(
-    Array.isArray(stored[SLOT_HISTORY_KEY]) ? stored[SLOT_HISTORY_KEY] : []
-  );
+  setHistoryEntries(domainHistory(stored[SLOT_HISTORY_KEY]));
 
   await loadDraft();
   await loadPickedElement();
@@ -269,15 +267,24 @@ async function loadPickedElement() {
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === "local" && changes[SLOT_HISTORY_KEY]) {
-    const next = changes[SLOT_HISTORY_KEY].newValue;
-    setHistoryEntries(Array.isArray(next) ? next : []);
+    setHistoryEntries(domainHistory(changes[SLOT_HISTORY_KEY].newValue));
   }
 });
 
 clearHistoryButton.addEventListener("click", async () => {
   if (!window.confirm("Tyhjennetäänkö koko vuorohistoria?")) return;
   try {
-    await chrome.storage.local.set({ [SLOT_HISTORY_KEY]: [] });
+    const urlPattern = urlPatternFromTab();
+    const stored = await chrome.storage.local.get({ [SLOT_HISTORY_KEY]: {} });
+    const all =
+      stored[SLOT_HISTORY_KEY] !== null &&
+      typeof stored[SLOT_HISTORY_KEY] === "object" &&
+      !Array.isArray(stored[SLOT_HISTORY_KEY])
+        ? stored[SLOT_HISTORY_KEY]
+        : {};
+    await chrome.storage.local.set({
+      [SLOT_HISTORY_KEY]: { ...all, [urlPattern]: [] },
+    });
     setHistoryEntries([]);
   } catch {
     setStatus("Historian tyhjennys epäonnistui.", true);
@@ -349,6 +356,19 @@ function formatTimestamp(iso) {
   } catch {
     return iso;
   }
+}
+
+function domainHistory(all) {
+  const urlPattern = urlPatternFromTab();
+  if (
+    !urlPattern ||
+    all === null ||
+    typeof all !== "object" ||
+    Array.isArray(all)
+  ) {
+    return [];
+  }
+  return Array.isArray(all[urlPattern]) ? all[urlPattern] : [];
 }
 
 function escapeHtml(text) {
