@@ -61,12 +61,25 @@
     return findNewSlotLines(before, after).length > 0;
   }
 
+  function shouldNotifyForRefresh(
+    beforeSnapshot,
+    afterSnapshot,
+    beforeSlots,
+    afterSlots,
+    hasListSelector
+  ) {
+    return hasListSelector
+      ? hasNewSlotLines(beforeSlots, afterSlots)
+      : !snapshotsAreEqual(beforeSnapshot, afterSnapshot);
+  }
+
   const api = {
     shouldStartMonitoring,
     snapshotsAreEqual,
     parseSlotText,
     findNewSlotLines,
     hasNewSlotLines,
+    shouldNotifyForRefresh,
   };
 
   globalScope.VuoropaivittajaContentHelpers = api;

@@ -12,12 +12,8 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     isContextInvalidated,
     STRINGS,
   } = globalThis.VuoropaivittajaShared;
-  const {
-    shouldStartMonitoring,
-    snapshotsAreEqual,
-    parseSlotText,
-    hasNewSlotLines,
-  } = globalThis.VuoropaivittajaContentHelpers;
+  const { shouldStartMonitoring, parseSlotText, shouldNotifyForRefresh } =
+    globalThis.VuoropaivittajaContentHelpers;
 
   let lastUrl = location.href;
   let pickerState = null;
@@ -248,9 +244,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         }
       }
 
-      const hasNewSlots = rule.listSelector
-        ? hasNewSlotLines(beforeSlots, afterSlots)
-        : !snapshotsAreEqual(before, after);
+      const hasNewSlots = shouldNotifyForRefresh(
+        before,
+        after,
+        beforeSlots,
+        afterSlots,
+        Boolean(rule.listSelector)
+      );
 
       if (hasNewSlots) {
         logger.info("Snapshot change detected", {

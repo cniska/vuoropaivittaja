@@ -7,6 +7,7 @@ const {
   parseSlotText,
   findNewSlotLines,
   hasNewSlotLines,
+  shouldNotifyForRefresh,
 } = require("./content-helpers.js");
 
 test("shouldStartMonitoring accepts only fully eligible states", () => {
@@ -121,4 +122,63 @@ test("hasNewSlotLines ignores removals and reordering", () => {
   assert.equal(hasNewSlotLines(oldSlots, removedOnly), false);
   assert.equal(hasNewSlotLines(oldSlots, reordered), false);
   assert.equal(hasNewSlotLines(oldSlots, withNewSlot), true);
+});
+
+test("shouldNotifyForRefresh ignores removals and reordering when a list selector exists", () => {
+  const beforeSnapshot = [
+    "Maanantai\n1.6.\n08:00–16:00",
+    "Tiistai\n2.6.\n08:00–16:00",
+  ];
+  const reorderedSnapshot = beforeSnapshot.slice().reverse();
+  const removalSnapshot = [beforeSnapshot[0]];
+  const newSlotSnapshot = [
+    "Tiistai\n2.6.\n08:00–16:00",
+    "Keskiviikko\n3.6.\n08:00–16:00",
+  ];
+
+  assert.equal(
+    shouldNotifyForRefresh(
+      beforeSnapshot,
+      removalSnapshot,
+      ["Maanantai 1.6.2026 08:00–16:00", "Tiistai 2.6.2026 08:00–16:00"],
+      ["Tiistai 2.6.2026 08:00–16:00"],
+      true
+    ),
+    false
+  );
+  assert.equal(
+    shouldNotifyForRefresh(
+      beforeSnapshot,
+      reorderedSnapshot,
+      ["Maanantai 1.6.2026 08:00–16:00", "Tiistai 2.6.2026 08:00–16:00"],
+      ["Tiistai 2.6.2026 08:00–16:00", "Maanantai 1.6.2026 08:00–16:00"],
+      true
+    ),
+    false
+  );
+  assert.equal(
+    shouldNotifyForRefresh(
+      beforeSnapshot,
+      newSlotSnapshot,
+      ["Maanantai 1.6.2026 08:00–16:00", "Tiistai 2.6.2026 08:00–16:00"],
+      ["Tiistai 2.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+      true
+    ),
+    true
+  );
+});
+
+test("shouldNotifyForRefresh falls back to snapshot comparison without a list selector", () => {
+  const beforeSnapshot = ["Keskiviikko 28.5. 06:00–14:00"];
+  const sameAfterSnapshot = ["Keskiviikko 28.5. 06:00–14:00"];
+  const changedAfterSnapshot = ["Keskiviikko 28.5. 06:00–14:00", "Uusi"];
+
+  assert.equal(
+    shouldNotifyForRefresh(beforeSnapshot, sameAfterSnapshot, [], [], false),
+    false
+  );
+  assert.equal(
+    shouldNotifyForRefresh(beforeSnapshot, changedAfterSnapshot, [], [], false),
+    true
+  );
 });
