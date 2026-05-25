@@ -11,6 +11,7 @@ const {
   urlMatches,
   looksLikeXPath,
   isStableIdentifier,
+  isContextInvalidated,
   parseSlotDate,
 } = require("./shared.js");
 
@@ -52,7 +53,10 @@ test("normalizeSettings clamps minIntervalMs to 5000", () => {
   assert.equal(normalizeSettings({ minIntervalMs: 500 }).minIntervalMs, 5000);
   assert.equal(normalizeSettings({ minIntervalMs: 2000 }).minIntervalMs, 5000);
   assert.equal(normalizeSettings({ minIntervalMs: 5000 }).minIntervalMs, 5000);
-  assert.equal(normalizeSettings({ minIntervalMs: 10000 }).minIntervalMs, 10000);
+  assert.equal(
+    normalizeSettings({ minIntervalMs: 10000 }).minIntervalMs,
+    10000
+  );
 });
 
 test("normalizeSettings clamps maxIntervalMs to minIntervalMs when max < min", () => {
@@ -320,8 +324,16 @@ test("mergeSlotHistory marks slots missing from snapshot with removedAt", () => 
   const slotA = "Ma 26.5. 08:00–16:00";
   const slotB = "Ti 27.5. 12:00–20:00";
   const existing = [
-    { text: slotA, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z" },
-    { text: slotB, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z" },
+    {
+      text: slotA,
+      firstSeen: "2026-01-01T00:00:00.000Z",
+      lastSeen: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      text: slotB,
+      firstSeen: "2026-01-01T00:00:00.000Z",
+      lastSeen: "2026-01-01T00:00:00.000Z",
+    },
   ];
   const result = mergeSlotHistory(existing, [slotB]);
   const a = result.find((e) => e.text === slotA);
@@ -333,17 +345,30 @@ test("mergeSlotHistory marks slots missing from snapshot with removedAt", () => 
 test("mergeSlotHistory clears removedAt when a slot reappears", () => {
   const slot = "Ma 26.5. 08:00–16:00";
   const existing = [
-    { text: slot, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z", removedAt: "2026-01-02T00:00:00.000Z" },
+    {
+      text: slot,
+      firstSeen: "2026-01-01T00:00:00.000Z",
+      lastSeen: "2026-01-01T00:00:00.000Z",
+      removedAt: "2026-01-02T00:00:00.000Z",
+    },
   ];
   const result = mergeSlotHistory(existing, [slot]);
-  assert.ok(!result[0].removedAt, "removedAt should be cleared on reappearance");
+  assert.ok(
+    !result[0].removedAt,
+    "removedAt should be cleared on reappearance"
+  );
 });
 
 test("mergeSlotHistory does not re-mark already removed slots", () => {
   const slot = "Ma 26.5. 08:00–16:00";
   const removedAt = "2026-01-02T00:00:00.000Z";
   const existing = [
-    { text: slot, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z", removedAt },
+    {
+      text: slot,
+      firstSeen: "2026-01-01T00:00:00.000Z",
+      lastSeen: "2026-01-01T00:00:00.000Z",
+      removedAt,
+    },
   ];
   const result = mergeSlotHistory(existing, ["Ti 27.5. 12:00–20:00"]);
   assert.equal(result.find((e) => e.text === slot).removedAt, removedAt);
@@ -414,6 +439,29 @@ test("parseSlotDate sorts correctly for ascending date order", () => {
     "Perjantai 6.6.2026 20:00 - 21:00",
     "Lauantai 22.6.2026 20:00 - 21:00",
   ]);
+});
+
+// isContextInvalidated
+
+test("isContextInvalidated returns true for invalidated context errors", () => {
+  assert.equal(
+    isContextInvalidated(new Error("Extension context invalidated.")),
+    true
+  );
+  assert.equal(
+    isContextInvalidated({ message: "Extension context invalidated" }),
+    true
+  );
+});
+
+test("isContextInvalidated returns false for unrelated errors", () => {
+  assert.equal(
+    isContextInvalidated(new Error("Receiving end does not exist")),
+    false
+  );
+  assert.equal(isContextInvalidated(null), false);
+  assert.equal(isContextInvalidated(undefined), false);
+  assert.equal(isContextInvalidated({}), false);
 });
 
 // isStableIdentifier

@@ -75,8 +75,9 @@ Each entry contains:
 - `text`: The visible slot line text as parsed from the slot list. Full Finnish weekday names are stored (e.g. "Lauantai"); abbreviation to 2 letters (e.g. "La") is applied at display time only.
 - `firstSeen`: ISO timestamp of when the slot was first observed.
 - `lastSeen`: ISO timestamp of when the slot was most recently observed.
+- `removedAt`: ISO timestamp set when the slot disappears from a non-empty snapshot (indicating it was booked or removed). Cleared if the slot reappears.
 
-Entries are de-duplicated by `text`. When a known slot text reappears, only `lastSeen` is updated; no duplicate entry is added. When the cap is exceeded, the oldest entries by `firstSeen` are dropped first.
+Entries are de-duplicated by `text`. When a known slot text reappears, `lastSeen` is updated and `removedAt` is cleared. When the cap is exceeded, the oldest entries by `firstSeen` are dropped first.
 
 Legacy flat-array values are silently discarded and replaced with an empty map.
 
@@ -88,10 +89,11 @@ The popup should be modern, clean, minimal, compact, and accessible.
 - Changes autosave immediately.
 - Successful saves show a short toast.
 - Failures triggered by explicit user actions also show a Finnish toast.
-- The popup shows the active tab origin.
+- The popup does not display the active tab origin or URL explicitly.
 - The user can start the element picker from the popup.
 - The user can test the configured selector from the popup.
 - The popup should restore the last picked selector when available.
+- When monitoring is active, all configuration inputs (interval, selector, picker, test) are disabled. Notification and sound toggles remain editable at all times.
 
 ### Two-column layout
 
@@ -104,14 +106,15 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 
 ### Slot history column
 
-- Shows all recorded slot entries for the current domain, sorted date ascending; ties broken by `lastSeen` ascending.
+- Shows all recorded slot entries for the current domain.
+- Active slots (no `removedAt`) are sorted before booked slots; within each group, sorted date ascending; ties broken by `lastSeen` ascending.
 - Weekday names are abbreviated to 2 letters at display time (e.g. "Lauantai" → "La").
-- Each row shows the slot text and the `lastSeen` timestamp formatted in Finnish locale.
-- A `firstSeen` timestamp is shown when it differs from `lastSeen` (i.e. the slot has been seen across multiple cycles).
-- The list is paginated; each page shows 10 entries.
-- Pagination controls appear below the list when there is more than one page.
-- A "Tyhjennä historia" (clear history) button appears above the list; clicking it clears only the current domain's entries after confirmation.
-- The column is accessible with keyboard: pagination and the clear button are focusable and operable without a mouse.
+- Each row shows the slot text, a first-seen timestamp, and either a last-seen timestamp or a removed-at timestamp, all formatted in Finnish locale.
+- Booked slots (with `removedAt`) are rendered at reduced opacity.
+- Booked slots show a hover-revealed delete button (×) to remove that individual entry from the domain's history.
+- The first 20 entries are shown initially; a load-more button shows 20 more at a time without resetting position on live updates.
+- A clear button appears above the list; clicking it clears only the current domain's entries after confirmation.
+- The column is accessible with keyboard: load-more, clear, and delete buttons are focusable and operable without a mouse.
 
 ## Monitoring requirements
 
@@ -156,6 +159,7 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 - When debug logging is enabled, logs should be readable in DevTools and should not dump raw JSON noise as the primary format.
 - Use logs to describe invisible actions such as autosave, picker activity, monitoring start, and alert dispatch.
 - Keep logs useful without being noisy.
+- Debug logging is toggled via the developer console: `VuoropaivittajaShared.toggleDebug()`. There is no UI toggle.
 
 ## Accessibility requirements
 
@@ -169,10 +173,12 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 - Include a local test page that can be served locally through a project script.
 - The test page should resemble a real slot list, not a toy demo.
 - It should have one refresh control and one visible slot list.
-- Slot items should show full Finnish weekday name, date, shift, and an optional `Uusi` badge.
-- New slots should be queued in the background and appear only when refresh is clicked.
-- Some refresh cycles should intentionally make no visible change so no-change behavior can be verified.
-- New slots should appear first in the list.
+- Slot items show full Finnish weekday name, date, and shift. No badge is used.
+- New slots are queued in the background and appear only when refresh is clicked.
+- Adding slots flashes the row green briefly; removed rows fade out in red before disappearing.
+- Some refresh cycles intentionally make no visible change so no-change behavior can be verified.
+- New slots appear first in the list.
+- A stat footer shows visible count, queued count, total added, total removed, remaining upcoming slots, and total click count.
 
 ## Testability requirements
 

@@ -27,11 +27,11 @@ const testSelectorButton = document.getElementById("test-selector");
 const statusEl = document.getElementById("status");
 const historyList = document.getElementById("history-list");
 const clearHistoryButton = document.getElementById("clear-history");
+const logger = createLogger("popup", false);
 
 let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
-let logger = createLogger("popup", false);
 let historyVisible = 20;
 let historyEntries = [];
 
@@ -44,10 +44,7 @@ chrome.runtime.onMessage.addListener((message) => {
       ok: Boolean(message.ok),
       message: String(message.message || ""),
     });
-    setStatus(
-      String(message.message || STRINGS.monitorClicked),
-      !message.ok
-    );
+    setStatus(String(message.message || STRINGS.monitorClicked), !message.ok);
   }
 });
 
@@ -78,10 +75,10 @@ enabledInput.addEventListener("change", () => {
     enabledInput.checked ? STRINGS.monitoringStarted : STRINGS.monitoringStopped
   );
 });
-notificationsInput.addEventListener("change", autosaveSettings);
-soundInput.addEventListener("change", autosaveSettings);
-minIntervalInput.addEventListener("change", autosaveSettings);
-maxIntervalInput.addEventListener("change", autosaveSettings);
+notificationsInput.addEventListener("change", () => autosaveSettings());
+soundInput.addEventListener("change", () => autosaveSettings());
+minIntervalInput.addEventListener("change", () => autosaveSettings());
+maxIntervalInput.addEventListener("change", () => autosaveSettings());
 selectorInput.addEventListener("change", () => {
   void autosaveRule();
 });
@@ -98,7 +95,9 @@ async function autosaveSettings(successMessage = STRINGS.saved) {
   minIntervalInput.value = String(minSec);
   maxIntervalInput.value = String(maxSec);
 
+  const stored = await chrome.storage.local.get({ [SETTINGS_KEY]: {} });
   const nextSettings = {
+    ...normalizeSettings(stored[SETTINGS_KEY]),
     enabled: enabledInput.checked,
     notifications: notificationsInput.checked,
     sound: soundInput.checked,
@@ -163,10 +162,7 @@ pickElementButton.addEventListener("click", async () => {
     await sendToActiveTab({ type: "start-picker" });
     window.close();
   } catch {
-    setStatus(
-      STRINGS.pickerFailed,
-      true
-    );
+    setStatus(STRINGS.pickerFailed, true);
   }
 });
 
@@ -197,9 +193,7 @@ testSelectorButton.addEventListener("click", async () => {
       { frameId: pickedFrameId }
     );
     setStatus(
-      response?.ok
-        ? response.message
-        : (response?.error ?? STRINGS.testFailed),
+      response?.ok ? response.message : (response?.error ?? STRINGS.testFailed),
       !response?.ok
     );
   } catch {
@@ -304,6 +298,27 @@ clearHistoryButton.addEventListener("click", async () => {
   }
 });
 
+historyList.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".history-item-delete");
+  if (!btn) return;
+  const text = btn.dataset.text;
+  try {
+    const urlPattern = urlPatternFromTab();
+    const stored = await chrome.storage.local.get({ [SLOT_HISTORY_KEY]: {} });
+    const all = normalizeSlotHistoryMap(stored[SLOT_HISTORY_KEY]);
+    const current = Array.isArray(all[urlPattern]) ? all[urlPattern] : [];
+    await chrome.storage.local.set({
+      [SLOT_HISTORY_KEY]: {
+        ...all,
+        [urlPattern]: current.filter((e) => e.text !== text),
+      },
+    });
+    setStatus(STRINGS.slotDeleted);
+  } catch {
+    setStatus(STRINGS.clearHistoryFailed, true);
+  }
+});
+
 function setHistoryEntries(entries) {
   historyEntries = entries.slice().sort((a, b) => {
     const aBooked = Boolean(a.removedAt);
@@ -339,10 +354,13 @@ function renderHistory() {
       const line2 = isBooked
         ? STRINGS.historyBooked(formatTimestamp(entry.removedAt))
         : STRINGS.historyLastSeen(formatTimestamp(entry.lastSeen));
+      const deleteBtn = isBooked
+        ? `<button type="button" class="history-item-delete" data-text="${escapeHtml(entry.text)}" aria-label="Poista: ${escapeHtml(abbreviateDow(entry.text))}">&times;</button>`
+        : "";
       return `<div role="listitem" class="history-item${isBooked ? " history-item--booked" : ""}">
         <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
         <span class="history-item-meta">${STRINGS.historyFirstSeen(formatTimestamp(entry.firstSeen))}</span>
-        <span class="history-item-meta">${line2}</span>
+        <span class="history-item-meta">${line2}</span>${deleteBtn}
       </div>`;
     })
     .join("");

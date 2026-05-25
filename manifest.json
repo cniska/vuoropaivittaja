@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Vuoropäivittäjä",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Seuraa vuorolistaa automaattisesti ja ilmoittaa, kun uusia vuoroja ilmestyy.",
   "minimum_chrome_version": "120",
   "permissions": [

@@ -152,6 +152,8 @@
 
   function mergeSlotHistory(existing, newLines, cap = SLOT_HISTORY_CAP) {
     const base = Array.isArray(existing) ? existing : [];
+    // Empty snapshot is treated as "unknown state" (e.g. page still loading),
+    // so we skip removedAt stamping to avoid false booked-slot detections.
     if (!Array.isArray(newLines) || newLines.length === 0) return base;
 
     const now = new Date().toISOString();
@@ -202,21 +204,19 @@
     monitoringStopped: "Seuranta pysäytetty.",
     saveFailed: "Tallennus epäonnistui.",
     openTargetFirst: "Avaa kohdesivusto ensin.",
-    pickerFailed:
-      "Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä.",
+    pickerFailed: "Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä.",
     enterSelectorFirst: "Syötä valitsin ensin.",
     testing: "Testataan...",
-    connectionFailed: "Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.",
+    connectionFailed:
+      "Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.",
     elementPicked: "Painike valittu sivulta.",
     monitorClicked: "Painiketta klikattiin.",
     testFailed: "Testi epäonnistui.",
     clearHistoryFailed: "Historian tyhjennys epäonnistui.",
+    slotDeleted: "Vuoro poistettu.",
 
     // Dialogs
     confirmClearHistory: "Tyhjennetäänkö koko vuorohistoria?",
-
-    // UI labels
-    noTargetSet: "Ei asetettu",
 
     // History panel
     historyEmpty: "Ei tallennettuja vuoroja.",
@@ -246,7 +246,15 @@
     await chrome.storage.local.set({
       settings: { ...stored.settings, debugLogging: !current },
     });
-    console.info(`[Vuoropäivittäjä] Debug logging ${!current ? "enabled" : "disabled"}`);
+    console.info(
+      `[Vuoropäivittäjä] Debug logging ${!current ? "enabled" : "disabled"}`
+    );
+  }
+
+  function isContextInvalidated(error) {
+    return String(error?.message || "").includes(
+      "Extension context invalidated"
+    );
   }
 
   const api = {
@@ -260,6 +268,7 @@
     urlMatches,
     looksLikeXPath,
     isStableIdentifier,
+    isContextInvalidated,
     parseSlotDate,
     STRINGS,
     toggleDebug,

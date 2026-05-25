@@ -9,6 +9,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     createLogger,
     looksLikeXPath,
     isStableIdentifier,
+    isContextInvalidated,
     STRINGS,
   } = globalThis.VuoropaivittajaShared;
   const { shouldStartMonitoring, snapshotsAreEqual, parseSlotText } =
@@ -957,10 +958,6 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     }
 
     element.dispatchEvent(new EventType(type, options));
-  }
-
-  function isContextInvalidated(error) {
-    return String(error?.message || "").includes("Extension context invalidated");
   }
 
   function delay(durationMs) {
