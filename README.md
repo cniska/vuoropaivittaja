@@ -74,3 +74,10 @@ See [ASENNUS.md](./ASENNUS.md) for the end-user installation steps in Finnish.
 - Developer-facing code, logs, and identifiers should remain in English.
 - Keep `SPEC.md` updated when behavior changes.
 - Prefer small, testable helpers over browser-specific logic.
+
+## Releasing
+
+- Keep `CHANGELOG.md` high-signal only: features and bugfixes.
+- Add the next dated version section to `CHANGELOG.md` before cutting a release.
+- Run `pnpm release <version>` to bump `manifest.json`, run checks, and create `~/Downloads/vuoropaivittaja-<version>.zip`.
+- See [.agents/skills/release/SKILL.md](./.agents/skills/release/SKILL.md) for the release workflow.

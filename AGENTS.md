@@ -19,3 +19,9 @@
 - Tests use `node --test` (built-in). Run with `pnpm test`.
 - `shared.js` exports to both `globalThis.VuoropaivittajaShared` and `module.exports`.
 - Keep `SPEC.md` current with behavior changes in the same slice when practical.
+
+## Releasing
+
+- Keep `CHANGELOG.md` high-signal only: features and bugfixes.
+- Add the next dated version section to `CHANGELOG.md` before a release.
+- Run `pnpm release <version>` to bump `manifest.json`, run checks, and create `~/Downloads/vuoropaivittaja-<version>.zip`.
