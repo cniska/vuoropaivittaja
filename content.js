@@ -153,6 +153,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         )
       ) {
         void startMonitoring(settings, rule, session).catch((error) => {
+          if (isContextInvalidated(error)) return;
           logger.warn("Monitoring loop failed", {
             event: "monitoring-failed",
             message: String(error?.message || error || ""),
@@ -160,6 +161,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         });
       }
     } catch (error) {
+      if (isContextInvalidated(error)) return;
       if (isTopFrame()) {
         logger.warn("Content script initialization failed", {
           event: "initialize-failed",
@@ -955,6 +957,10 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     }
 
     element.dispatchEvent(new EventType(type, options));
+  }
+
+  function isContextInvalidated(error) {
+    return String(error?.message || "").includes("Extension context invalidated");
   }
 
   function delay(durationMs) {
