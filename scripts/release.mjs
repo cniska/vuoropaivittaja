@@ -31,25 +31,23 @@ function createZip(nextVersion) {
   mkdirSync(downloadsDir, { recursive: true });
   const zipPath = join(downloadsDir, `vuoropaivittaja-${nextVersion}.zip`);
 
-  const listedFiles = spawnSync(
-    "git",
-    ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-    {
-      cwd: process.cwd(),
-      encoding: "utf8",
-    }
-  );
+  const files = [
+    "manifest.json",
+    "popup.html",
+    "popup.css",
+    "offscreen.html",
+    "icon.png",
+    "src/background.js",
+    "src/content.js",
+    "src/content-helpers.js",
+    "src/offscreen.js",
+    "src/popup.js",
+    "src/popup-helpers.js",
+    "src/shared.js",
+  ];
 
-  if (listedFiles.status !== 0) {
-    fail("Could not list files for packaging.");
-  }
-
-  const files = listedFiles.stdout.split("\0").filter(Boolean);
-
-  const zip = spawnSync("zip", ["-q", zipPath, "-@"], {
+  const zip = spawnSync("zip", ["-q", zipPath, ...files], {
     cwd: process.cwd(),
-    input: `${files.join("\n")}\n`,
-    encoding: "utf8",
   });
 
   if (zip.status !== 0) {

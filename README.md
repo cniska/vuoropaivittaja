@@ -77,3 +77,5 @@ See [ASENNUS.md](./ASENNUS.md) for the end-user installation steps in Finnish.
 - Prefer small, testable helpers over browser-specific logic.
 
 ## Releasing
+
+- Use [.agents/skills/release/SKILL.md](./.agents/skills/release/SKILL.md) for the release workflow.
