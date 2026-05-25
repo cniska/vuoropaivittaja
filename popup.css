@@ -266,6 +266,12 @@ button:focus-visible {
 
 button:disabled { opacity: 0.45; cursor: default; }
 
+.toggle:has(input:disabled) { opacity: 0.45; cursor: default; }
+
+.text-input:disabled { opacity: 0.45; cursor: default; }
+
+.interval-input:has(input:disabled) { opacity: 0.45; }
+
 .secondary-button { background: #eff6ff; color: var(--accent); }
 .secondary-button:hover:not(:disabled) { background: #dbeafe; }
 

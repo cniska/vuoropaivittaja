@@ -19,10 +19,8 @@ const HISTORY_PAGE_SIZE = 20;
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
 const soundInput = document.getElementById("sound");
-const debugLoggingInput = document.getElementById("debug-logging");
 const minIntervalInput = document.getElementById("min-interval");
 const maxIntervalInput = document.getElementById("max-interval");
-const targetUrlDisplay = document.getElementById("target-url-display");
 const selectorInput = document.getElementById("selector");
 const pickElementButton = document.getElementById("pick-element");
 const testSelectorButton = document.getElementById("test-selector");
@@ -33,7 +31,7 @@ const clearHistoryButton = document.getElementById("clear-history");
 let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
-let logger = createLogger("popup", () => debugLoggingInput.checked);
+let logger = createLogger("popup", false);
 let historyVisible = 20;
 let historyEntries = [];
 
@@ -65,7 +63,7 @@ async function initialize() {
 
   fillSettings(normalizeSettings(stored[SETTINGS_KEY]));
   fillRule(normalizeRule(stored[RULE_KEY]));
-  logger = createLogger("popup", () => debugLoggingInput.checked);
+  syncDisabledState();
 
   setHistoryEntries(domainHistory(stored[SLOT_HISTORY_KEY]));
 
@@ -74,10 +72,12 @@ async function initialize() {
   void sendToActiveTab({ type: "snapshot-slots" }).catch(() => {});
 }
 
-enabledInput.addEventListener("change", autosaveSettings);
+enabledInput.addEventListener("change", () => {
+  syncDisabledState();
+  void autosaveSettings();
+});
 notificationsInput.addEventListener("change", autosaveSettings);
 soundInput.addEventListener("change", autosaveSettings);
-debugLoggingInput.addEventListener("change", autosaveSettings);
 minIntervalInput.addEventListener("change", autosaveSettings);
 maxIntervalInput.addEventListener("change", autosaveSettings);
 selectorInput.addEventListener("change", () => {
@@ -100,7 +100,6 @@ async function autosaveSettings() {
     enabled: enabledInput.checked,
     notifications: notificationsInput.checked,
     sound: soundInput.checked,
-    debugLogging: debugLoggingInput.checked,
     minIntervalMs: minSec * 1000,
     maxIntervalMs: maxSec * 1000,
   };
@@ -210,14 +209,25 @@ function fillSettings(settings) {
   enabledInput.checked = settings.enabled;
   notificationsInput.checked = settings.notifications;
   soundInput.checked = settings.sound;
-  debugLoggingInput.checked = settings.debugLogging;
   minIntervalInput.value = String(settings.minIntervalMs / 1000);
   maxIntervalInput.value = String(settings.maxIntervalMs / 1000);
 }
 
 function fillRule(rule) {
   if (rule) selectorInput.value = rule.selector;
-  targetUrlDisplay.textContent = urlPatternFromTab() || STRINGS.noTargetSet;
+}
+
+function syncDisabledState() {
+  const locked = enabledInput.checked;
+  for (const el of [
+    minIntervalInput,
+    maxIntervalInput,
+    selectorInput,
+    pickElementButton,
+    testSelectorButton,
+  ]) {
+    el.disabled = locked;
+  }
 }
 
 function setStatus(message, isError = false) {

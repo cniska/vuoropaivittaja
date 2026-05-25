@@ -224,6 +224,19 @@
     notificationBody: "Uusia vuoroja saattaa olla saatavilla.",
   };
 
+  async function toggleDebug() {
+    if (typeof chrome === "undefined" || !chrome.storage) {
+      console.warn("toggleDebug: chrome.storage not available in this context");
+      return;
+    }
+    const stored = await chrome.storage.local.get({ settings: {} });
+    const current = Boolean(stored.settings?.debugLogging);
+    await chrome.storage.local.set({
+      settings: { ...stored.settings, debugLogging: !current },
+    });
+    console.info(`[Vuoropäivittäjä] Debug logging ${!current ? "enabled" : "disabled"}`);
+  }
+
   const api = {
     normalizeSettings,
     normalizeRule,
@@ -237,6 +250,7 @@
     isStableIdentifier,
     parseSlotDate,
     STRINGS,
+    toggleDebug,
   };
 
   globalScope.VuoropaivittajaShared = api;
