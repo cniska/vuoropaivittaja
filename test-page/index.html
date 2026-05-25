@@ -137,14 +137,17 @@
         padding: 8px 16px;
         font-size: 11px;
         color: #94a3b8;
+        display: flex;
+        gap: 16px;
       }
+
+      .stat-value { font-weight: 700; color: #0f172a; }
+      .stat-value[data-highlight] { color: #15803d; }
     </style>
   </head>
   <body>
     <div class="toolbar">
       <strong>Testipaneeli</strong>
-      <span id="click-log">Klikkauksia: 0</span>
-      <span id="state-label"></span>
     </div>
 
     <div class="page">
@@ -168,21 +171,30 @@
           <!-- rendered by JS -->
         </div>
 
-        <div class="card-footer" id="click-log-footer">Klikkauksia: 0</div>
+        <div class="card-footer">
+          <span>Näkyvissä: <span class="stat-value" id="stat-visible">0</span></span>
+          <span>Jonossa: <span class="stat-value" id="stat-queued">0</span></span>
+          <span>Lisätty: <span class="stat-value" id="stat-added">0</span></span>
+          <span>Tulossa: <span class="stat-value" id="stat-remaining">0</span></span>
+          <span>Klikkauksia: <span class="stat-value" id="stat-clicks">0</span></span>
+        </div>
       </div>
     </div>
 
     <script>
       const INITIAL_SLOTS = [
         { date: "26.5.2026", weekday: "(01) Maanantai", shift: "06.00 - 14.00" },
-        { date: "26.5.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
         { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "08.00 - 16.00" },
-        { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "16.00 - 00.00" },
-        { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "06.00 - 14.00" },
         { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "14.00 - 22.00" },
         { date: "29.5.2026", weekday: "(04) Torstai",   shift: "08.00 - 16.00" },
-        { date: "29.5.2026", weekday: "(04) Torstai",   shift: "16.00 - 00.00" },
         { date: "30.5.2026", weekday: "(05) Perjantai", shift: "06.00 - 14.00" },
+      ];
+
+      const UPCOMING_SLOTS = [
+        { date: "26.5.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
+        { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "16.00 - 00.00" },
+        { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "06.00 - 14.00" },
+        { date: "29.5.2026", weekday: "(04) Torstai",   shift: "16.00 - 00.00" },
         { date: "30.5.2026", weekday: "(05) Perjantai", shift: "14.00 - 22.00" },
         { date: "31.5.2026", weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
         { date: "1.6.2026",  weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
@@ -196,23 +208,19 @@
         { date: "9.6.2026",  weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
         { date: "10.6.2026", weekday: "(02) Tiistai",   shift: "06.00 - 14.00" },
         { date: "11.6.2026", weekday: "(03) Keskiviikko", shift: "08.00 - 16.00" },
-      ];
-
-      const UPCOMING_SLOTS = [
         { date: "12.6.2026", weekday: "(04) Torstai",   shift: "06.00 - 14.00" },
-        { date: "12.6.2026", weekday: "(04) Torstai",   shift: "14.00 - 22.00" },
         { date: "13.6.2026", weekday: "(05) Perjantai", shift: "08.00 - 16.00" },
         { date: "14.6.2026", weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
-        { date: "15.6.2026", weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
-        { date: "16.6.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
       ];
 
-      const ARRIVAL_PATTERN = [true, false, true, false, true, false];
+      // 1 in 4 ticks produces a new slot
+      const ARRIVAL_PATTERN = [true, false, false, false];
 
       const visibleSlots = INITIAL_SLOTS.map((s) => ({ ...s }));
       const pendingSlots = [];
       let arrivalIndex = 0;
       let clickCount = 0;
+      let addedCount = 0;
 
       function renderSlots() {
         const list = document.querySelector('[role="list"]');
@@ -229,17 +237,17 @@
             </div>`
           )
           .join("");
-        updateStatus();
       }
 
-      function updateStatus(msg = "") {
-        document.getElementById("state-label").textContent =
-          pendingSlots.length > 0
-            ? `Uusia vuoroja odottaa: ${pendingSlots.length}`
-            : msg || "";
-        const log = `Klikkauksia: ${clickCount}`;
-        document.getElementById("click-log").textContent = log;
-        document.getElementById("click-log-footer").textContent = log;
+      function updateStatus() {
+        const queued = pendingSlots.length;
+        document.getElementById("stat-visible").textContent = visibleSlots.length;
+        const queuedEl = document.getElementById("stat-queued");
+        queuedEl.textContent = queued;
+        queuedEl.toggleAttribute("data-highlight", queued > 0);
+        document.getElementById("stat-added").textContent = addedCount;
+        document.getElementById("stat-remaining").textContent = UPCOMING_SLOTS.length;
+        document.getElementById("stat-clicks").textContent = clickCount;
       }
 
       function queueIncomingSlot() {
@@ -257,6 +265,7 @@
       function handleRefresh() {
         clickCount++;
         if (pendingSlots.length > 0) {
+          addedCount += pendingSlots.length;
           visibleSlots.unshift(...pendingSlots);
           pendingSlots.length = 0;
         }
