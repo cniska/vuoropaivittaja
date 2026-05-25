@@ -336,15 +336,13 @@ function renderHistory() {
   const items = visible
     .map((entry) => {
       const isBooked = Boolean(entry.removedAt);
-      const meta = isBooked
-        ? STRINGS.historyBooked(
-            formatTimestamp(entry.firstSeen),
-            formatTimestamp(entry.removedAt)
-          )
+      const line2 = isBooked
+        ? STRINGS.historyBooked(formatTimestamp(entry.removedAt))
         : STRINGS.historyLastSeen(formatTimestamp(entry.lastSeen));
       return `<div role="listitem" class="history-item${isBooked ? " history-item--booked" : ""}">
         <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
-        <span class="history-item-meta">${meta}</span>
+        <span class="history-item-meta">${STRINGS.historyFirstSeen(formatTimestamp(entry.firstSeen))}</span>
+        <span class="history-item-meta">${line2}</span>
       </div>`;
     })
     .join("");

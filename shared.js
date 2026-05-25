@@ -223,7 +223,8 @@
     historyLoadMore: (n) => `Lataa lisää (${n})`,
     historyTotal: (n) => `Yhteensä <strong>${n}</strong> vuoroa`,
     historyLastSeen: (ts) => `Viimeksi nähty ${ts}`,
-    historyBooked: (firstTs, removedTs) => `Ilmestyi ${firstTs} · Varattu ${removedTs}`,
+    historyFirstSeen: (ts) => `Ilmestyi ${ts}`,
+    historyBooked: (ts) => `Varattu ${ts}`,
 
     // In-page picker & click results
     pickerHint: "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",
