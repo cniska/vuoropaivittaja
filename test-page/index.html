@@ -6,330 +6,268 @@
     <title>Vuoropäivittäjä · Testisivu</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <style>
-      *,
-      *::before,
-      *::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
-        font-family: "Segoe UI", system-ui, sans-serif;
+        font-family: system-ui, sans-serif;
+        font-size: 13px;
         background: #f8fafc;
-        color: #1e293b;
+        color: #0f172a;
         min-height: 100vh;
       }
 
-      .control-panel {
-        background: #ffffff;
-        color: #1e293b;
-        padding: 10px 16px;
+      /* Dev toolbar */
+      .toolbar {
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 8px 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
+        gap: 12px;
         font-size: 12px;
-        border-bottom: 1px solid #e2e8f0;
+        color: #64748b;
       }
 
-      .control-panel strong {
-        margin-right: 6px;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+      .toolbar strong {
         font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #94a3b8;
       }
 
-      #state-label {
-        margin-left: auto;
-        color: #64748b;
-        font-size: 12px;
-      }
+      #state-label { margin-left: auto; }
 
+      /* Page */
       .page {
-        max-width: 760px;
-        margin: 24px auto;
-        padding: 0 16px 24px;
+        max-width: 680px;
+        margin: 28px auto;
+        padding: 0 16px;
       }
 
-      h1 {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 6px;
-      }
-
-      .subtitle {
-        color: #64748b;
-        font-size: 13px;
-        margin-bottom: 20px;
-      }
-
-      .app-wrapper {
-        background: #ffffff;
-        border-radius: 8px;
+      /* App card */
+      .card {
+        background: #fff;
         border: 1px solid #e2e8f0;
+        border-radius: 8px;
         overflow: hidden;
       }
 
-      .app-header {
-        padding: 16px 20px;
+      .card-header {
+        padding: 12px 16px;
         border-bottom: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
         justify-content: space-between;
       }
 
-      .app-title {
-        font-size: 15px;
+      .card-title {
+        font-size: 13px;
         font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
 
-      .refresh-button {
+      .refresh-btn {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        background: #2563eb;
-        color: #fff;
+        gap: 5px;
+        background: #eff6ff;
+        color: #2563eb;
+        border: none;
         border-radius: 6px;
-        padding: 7px 14px;
-        font-size: 13px;
-        font-weight: 500;
+        padding: 6px 12px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
         cursor: pointer;
-        user-select: none;
-        transition: background 0.15s, transform 0.1s;
-        outline-offset: 2px;
+        transition: background 0.15s;
       }
 
-      .refresh-button:hover {
-        background: #1d4ed8;
-      }
+      .refresh-btn:hover { background: #dbeafe; }
 
-      .refresh-button:active {
-        transform: scale(0.97);
-      }
-
-      .refresh-button:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: 3px;
-      }
-
-      .refresh-button svg {
-        width: 15px;
-        height: 15px;
+      .refresh-btn svg {
+        width: 13px;
+        height: 13px;
         fill: currentColor;
       }
 
-      .slot-list {
-        padding: 14px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        min-height: 120px;
-      }
+      /* Slot list */
+      .slot-list { display: flex; flex-direction: column; }
 
       .slot-item {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 12px 16px;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-        animation: fadeIn 0.2s ease;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-4px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .slot-heading {
-        display: flex;
+        display: grid;
+        grid-template-columns: 90px 160px 1fr;
         align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        gap: 12px;
+        animation: fadeIn 0.15s ease;
       }
 
-      .slot-weekday {
-        font-weight: 600;
-        font-size: 13px;
+      .slot-item:last-child { border-bottom: none; }
+
+      .slot-date { color: #64748b; }
+      .slot-weekday { font-weight: 500; }
+      .slot-time { }
+      .slot-badge {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #15803d;
+        background: #f0fdf4;
+        border-radius: 4px;
+        padding: 1px 5px;
       }
 
-      .slot-date,
-      .slot-time {
-        font-weight: 500;
-        font-size: 13px;
-      }
-
-      .slot-time {
-        color: #334155;
-      }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
       .empty-state {
-        color: #94a3b8;
-        font-size: 13px;
+        padding: 32px 16px;
         text-align: center;
-        padding: 28px;
+        color: #94a3b8;
       }
 
-      .click-log {
+      .card-footer {
         border-top: 1px solid #e2e8f0;
-        padding: 10px 20px;
-        font-size: 12px;
+        padding: 8px 16px;
+        font-size: 11px;
         color: #94a3b8;
-        min-height: 40px;
       }
     </style>
   </head>
   <body>
-    <div class="control-panel">
+    <div class="toolbar">
       <strong>Testipaneeli</strong>
+      <span id="click-log">Klikkauksia: 0</span>
       <span id="state-label"></span>
     </div>
 
     <div class="page">
-      <h1>Vapaavuorovaraus</h1>
-      <p class="subtitle">Simuloi PowerApps-sovelluksen vuorolistaa.</p>
-
-      <div class="app-wrapper" data-testid="vuoro-app">
-        <div class="app-header">
-          <span class="app-title">Saatavilla olevat vuorot</span>
-          <div
-            role="button"
-            data-control-name="refresh_button"
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Varattavat vuorot</span>
+          <button
+            class="refresh-btn"
             aria-label="Päivitä vuorolista"
-            class="refresh-button"
-            tabindex="0"
+            data-control-name="refresh_button"
           >
             <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
               <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
             </svg>
-            Päivitä
-          </div>
+            Päivitä luettelo
+          </button>
         </div>
 
-        <div role="list" aria-label="Vuorolista" data-testid="vuoro-lista" class="slot-list">
+        <div role="list" aria-label="Vuorolista" class="slot-list">
           <!-- rendered by JS -->
         </div>
 
-        <div class="click-log" id="click-log">Klikkauksia: 0</div>
+        <div class="card-footer" id="click-log-footer">Klikkauksia: 0</div>
       </div>
     </div>
 
     <script>
       const INITIAL_SLOTS = [
-        { weekday: "Keskiviikko", date: "28.5.", shift: "06:00–14:00", isNew: false },
-        { weekday: "Tiistai", date: "27.5.", shift: "12:00–20:00", isNew: false },
-        { weekday: "Maanantai", date: "26.5.", shift: "08:00–16:00", isNew: false },
+        { date: "26.5.2026", weekday: "(01) Maanantai", shift: "06.00 - 14.00" },
+        { date: "26.5.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
+        { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "08.00 - 16.00" },
+        { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "16.00 - 00.00" },
+        { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "06.00 - 14.00" },
+        { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "14.00 - 22.00" },
+        { date: "29.5.2026", weekday: "(04) Torstai",   shift: "08.00 - 16.00" },
+        { date: "29.5.2026", weekday: "(04) Torstai",   shift: "16.00 - 00.00" },
+        { date: "30.5.2026", weekday: "(05) Perjantai", shift: "06.00 - 14.00" },
+        { date: "30.5.2026", weekday: "(05) Perjantai", shift: "14.00 - 22.00" },
+        { date: "31.5.2026", weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
+        { date: "1.6.2026",  weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
+        { date: "2.6.2026",  weekday: "(01) Maanantai", shift: "06.00 - 14.00" },
+        { date: "3.6.2026",  weekday: "(02) Tiistai",   shift: "08.00 - 16.00" },
+        { date: "4.6.2026",  weekday: "(03) Keskiviikko", shift: "14.00 - 22.00" },
+        { date: "5.6.2026",  weekday: "(04) Torstai",   shift: "06.00 - 14.00" },
+        { date: "6.6.2026",  weekday: "(05) Perjantai", shift: "08.00 - 16.00" },
+        { date: "7.6.2026",  weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
+        { date: "8.6.2026",  weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
+        { date: "9.6.2026",  weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
+        { date: "10.6.2026", weekday: "(02) Tiistai",   shift: "06.00 - 14.00" },
+        { date: "11.6.2026", weekday: "(03) Keskiviikko", shift: "08.00 - 16.00" },
       ];
 
       const UPCOMING_SLOTS = [
-        { weekday: "Lauantai", date: "31.5.", shift: "09:00–15:00" },
-        { weekday: "Perjantai", date: "30.5.", shift: "14:00–22:00" },
-        { weekday: "Torstai", date: "29.5.", shift: "10:00–18:00" },
+        { date: "12.6.2026", weekday: "(04) Torstai",   shift: "06.00 - 14.00" },
+        { date: "12.6.2026", weekday: "(04) Torstai",   shift: "14.00 - 22.00" },
+        { date: "13.6.2026", weekday: "(05) Perjantai", shift: "08.00 - 16.00" },
+        { date: "14.6.2026", weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
+        { date: "15.6.2026", weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
+        { date: "16.6.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
       ];
 
       const ARRIVAL_PATTERN = [true, false, true, false, true, false];
 
-      const visibleSlots = INITIAL_SLOTS.map((slot) => ({ ...slot }));
+      const visibleSlots = INITIAL_SLOTS.map((s) => ({ ...s }));
       const pendingSlots = [];
       let arrivalIndex = 0;
       let clickCount = 0;
 
       function renderSlots() {
         const list = document.querySelector('[role="list"]');
-        const slots = visibleSlots;
-
-        if (slots.length === 0) {
+        if (visibleSlots.length === 0) {
           list.innerHTML = '<div class="empty-state">Ei saatavilla olevia vuoroja.</div>';
-        } else {
-          list.innerHTML = slots
-            .map(
-              (slot) => `
-            <div role="listitem" class="slot-item">
-              <div class="slot-heading">
-                <span class="slot-weekday">${slot.weekday}</span>
-                <span class="slot-date">${slot.date}</span>
-              </div>
-              <div class="slot-time">${slot.shift}</div>
-            </div>
-          `
-            )
-            .join("");
+          return;
         }
-
+        list.innerHTML = visibleSlots
+          .map(
+            (s) => `<div role="listitem" class="slot-item">
+              <span class="slot-date">${s.date}</span>
+              <span class="slot-weekday">${s.weekday}</span>
+              <span class="slot-time">${s.shift}${s.isNew ? '<span class="slot-badge">Uusi</span>' : ""}</span>
+            </div>`
+          )
+          .join("");
         updateStatus();
       }
 
-      function updateStatus(extraMessage = "") {
+      function updateStatus(msg = "") {
         document.getElementById("state-label").textContent =
           pendingSlots.length > 0
             ? `Uusia vuoroja odottaa: ${pendingSlots.length}`
-            : "Ei uusia vuoroja juuri nyt";
-        document.getElementById("click-log").textContent = extraMessage
-          ? `Klikkauksia: ${clickCount} — ${extraMessage}`
-          : `Klikkauksia: ${clickCount}`;
+            : msg || "";
+        const log = `Klikkauksia: ${clickCount}`;
+        document.getElementById("click-log").textContent = log;
+        document.getElementById("click-log-footer").textContent = log;
       }
-
-      const refreshBtn = document.querySelector('[role="button"]');
 
       function queueIncomingSlot() {
-        const shouldQueueSlot = ARRIVAL_PATTERN[arrivalIndex % ARRIVAL_PATTERN.length];
-        arrivalIndex += 1;
-
-        if (!shouldQueueSlot) {
-          updateStatus("ei uusia vuoroja juuri nyt");
+        if (!ARRIVAL_PATTERN[arrivalIndex % ARRIVAL_PATTERN.length]) {
+          arrivalIndex++;
           return;
         }
-
-        const nextSlot = UPCOMING_SLOTS.shift();
-        if (!nextSlot) {
-          clearInterval(arrivalTimer);
-          updateStatus("uusia vuoroja ei ole tulossa");
-          return;
-        }
-
-        pendingSlots.push({ ...nextSlot, isNew: true });
-        updateStatus("uusi vuoro odottaa päivitystä");
+        arrivalIndex++;
+        const next = UPCOMING_SLOTS.shift();
+        if (!next) { clearInterval(arrivalTimer); return; }
+        pendingSlots.push({ ...next, isNew: true });
+        updateStatus();
       }
 
-      function flushPendingSlots() {
-        if (pendingSlots.length === 0) {
-          return false;
+      function handleRefresh() {
+        clickCount++;
+        if (pendingSlots.length > 0) {
+          visibleSlots.unshift(...pendingSlots);
+          pendingSlots.length = 0;
         }
-
-        visibleSlots.unshift(...pendingSlots);
-        pendingSlots.length = 0;
-        return true;
-      }
-
-      function handleRefreshClick() {
-        clickCount += 1;
-        const hadPendingSlots = flushPendingSlots();
         renderSlots();
-        updateStatus(
-          hadPendingSlots
-            ? "uudet vuorot lisättiin listan alkuun"
-            : "ei uusia vuoroja vielä"
-        );
+        updateStatus();
       }
 
-      refreshBtn.addEventListener("click", handleRefreshClick);
-
+      const refreshBtn = document.querySelector(".refresh-btn");
+      refreshBtn.addEventListener("click", handleRefresh);
       refreshBtn.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleRefreshClick();
-        }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleRefresh(); }
       });
 
       const arrivalTimer = window.setInterval(queueIncomingSlot, 12000);
