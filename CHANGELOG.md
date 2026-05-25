@@ -11,7 +11,7 @@ High-signal release notes only: features and bugfixes.
 ### Bugfixes
 - Fixed the initial popup history flash on first load.
 - Prevented false alerts from removals and reordering.
-- Restored the popup history helper export after the refactor.
+- Fixed popup history rendering.
 
 ## [1.0.0] - 2026-05-25
 ### Features
