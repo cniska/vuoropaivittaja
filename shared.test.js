@@ -7,6 +7,7 @@ const {
   shouldMonitorTab,
   buildChangeAlertMessage,
   mergeSlotHistory,
+  normalizeSlotHistoryMap,
   urlMatches,
   looksLikeXPath,
   isStableIdentifier,
@@ -325,6 +326,24 @@ test("mergeSlotHistory does not mutate the existing array", () => {
   const original = JSON.stringify(existing);
   mergeSlotHistory(existing, [slot]);
   assert.equal(JSON.stringify(existing), original);
+});
+
+// normalizeSlotHistoryMap
+
+test("normalizeSlotHistoryMap returns the object unchanged for a valid map", () => {
+  const map = { "https://example.com": [] };
+  assert.equal(normalizeSlotHistoryMap(map), map);
+});
+
+test("normalizeSlotHistoryMap returns empty object for an array (legacy format)", () => {
+  assert.deepEqual(normalizeSlotHistoryMap([{ text: "slot" }]), {});
+});
+
+test("normalizeSlotHistoryMap returns empty object for null and primitives", () => {
+  assert.deepEqual(normalizeSlotHistoryMap(null), {});
+  assert.deepEqual(normalizeSlotHistoryMap(undefined), {});
+  assert.deepEqual(normalizeSlotHistoryMap("string"), {});
+  assert.deepEqual(normalizeSlotHistoryMap(42), {});
 });
 
 // isStableIdentifier

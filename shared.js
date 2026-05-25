@@ -2,6 +2,7 @@
   const DEFAULT_MIN_INTERVAL_MS = 30000;
   const DEFAULT_MAX_INTERVAL_MS = 90000;
   const ABSOLUTE_MIN_INTERVAL_MS = 2000;
+  const SLOT_HISTORY_CAP = 500;
 
   function normalizeSettings(value) {
     const s = value && typeof value === "object" ? value : {};
@@ -143,7 +144,11 @@
     );
   }
 
-  const SLOT_HISTORY_CAP = 500;
+  function normalizeSlotHistoryMap(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
+  }
 
   function mergeSlotHistory(existing, newLines, cap = SLOT_HISTORY_CAP) {
     const base = Array.isArray(existing) ? existing : [];
@@ -179,6 +184,7 @@
     shouldMonitorTab,
     buildChangeAlertMessage,
     mergeSlotHistory,
+    normalizeSlotHistoryMap,
     createLogger,
     urlMatches,
     looksLikeXPath,

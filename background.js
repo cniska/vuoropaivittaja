@@ -5,6 +5,7 @@ const {
   normalizeRule,
   shouldMonitorTab,
   mergeSlotHistory,
+  normalizeSlotHistoryMap,
   urlMatches,
   createLogger,
 } = self.VuoropaivittajaShared;
@@ -153,12 +154,7 @@ async function fireChangeAlert(message) {
 async function updateSlotHistory(urlPattern, slots) {
   try {
     const stored = await chrome.storage.local.get({ slotHistory: {} });
-    const all =
-      stored.slotHistory !== null &&
-      typeof stored.slotHistory === "object" &&
-      !Array.isArray(stored.slotHistory)
-        ? stored.slotHistory
-        : {};
+    const all = normalizeSlotHistoryMap(stored.slotHistory);
     const existing = Array.isArray(all[urlPattern]) ? all[urlPattern] : [];
     const merged = mergeSlotHistory(existing, slots);
     await chrome.storage.local.set({

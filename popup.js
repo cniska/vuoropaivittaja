@@ -1,5 +1,9 @@
-const { normalizeSettings, normalizeRule, createLogger } =
-  globalThis.VuoropaivittajaShared;
+const {
+  normalizeSettings,
+  normalizeRule,
+  normalizeSlotHistoryMap,
+  createLogger,
+} = globalThis.VuoropaivittajaShared;
 
 const SETTINGS_KEY = "settings";
 const RULE_KEY = "rule";
@@ -276,12 +280,7 @@ clearHistoryButton.addEventListener("click", async () => {
   try {
     const urlPattern = urlPatternFromTab();
     const stored = await chrome.storage.local.get({ [SLOT_HISTORY_KEY]: {} });
-    const all =
-      stored[SLOT_HISTORY_KEY] !== null &&
-      typeof stored[SLOT_HISTORY_KEY] === "object" &&
-      !Array.isArray(stored[SLOT_HISTORY_KEY])
-        ? stored[SLOT_HISTORY_KEY]
-        : {};
+    const all = normalizeSlotHistoryMap(stored[SLOT_HISTORY_KEY]);
     await chrome.storage.local.set({
       [SLOT_HISTORY_KEY]: { ...all, [urlPattern]: [] },
     });
@@ -360,15 +359,9 @@ function formatTimestamp(iso) {
 
 function domainHistory(all) {
   const urlPattern = urlPatternFromTab();
-  if (
-    !urlPattern ||
-    all === null ||
-    typeof all !== "object" ||
-    Array.isArray(all)
-  ) {
-    return [];
-  }
-  return Array.isArray(all[urlPattern]) ? all[urlPattern] : [];
+  if (!urlPattern) return [];
+  const map = normalizeSlotHistoryMap(all);
+  return Array.isArray(map[urlPattern]) ? map[urlPattern] : [];
 }
 
 function escapeHtml(text) {
