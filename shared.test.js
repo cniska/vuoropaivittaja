@@ -248,6 +248,23 @@ test("urlMatches compares case-insensitively", () => {
   );
 });
 
+test("urlMatches compares URL origins exactly when both sides are URLs", () => {
+  assert.equal(
+    urlMatches(
+      "https://apps.powerapps.com",
+      "https://apps.powerapps.com.evil.example/play"
+    ),
+    false
+  );
+  assert.equal(
+    urlMatches(
+      "https://apps.powerapps.com",
+      "https://apps.powerapps.com/play/123"
+    ),
+    true
+  );
+});
+
 // looksLikeXPath
 
 test("looksLikeXPath detects common XPath formats", () => {

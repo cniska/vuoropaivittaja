@@ -5,6 +5,8 @@ const {
   shouldStartMonitoring,
   snapshotsAreEqual,
   parseSlotText,
+  findNewSlotLines,
+  hasNewSlotLines,
 } = require("./content-helpers.js");
 
 test("shouldStartMonitoring accepts only fully eligible states", () => {
@@ -88,4 +90,35 @@ test("snapshotsAreEqual compares ordered list snapshots", () => {
   assert.equal(snapshotsAreEqual([slotA], [slotA, slotB]), false);
   assert.equal(snapshotsAreEqual(null, [slotA]), false);
   assert.equal(snapshotsAreEqual([slotA], undefined), false);
+});
+
+test("findNewSlotLines returns only newly added slots", () => {
+  const oldSlots = [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Tiistai 2.6.2026 08:00–16:00",
+  ];
+  const nextSlots = [
+    "Tiistai 2.6.2026 08:00–16:00",
+    "Keskiviikko 3.6.2026 08:00–16:00",
+  ];
+
+  assert.deepEqual(findNewSlotLines(oldSlots, nextSlots), [
+    "Keskiviikko 3.6.2026 08:00–16:00",
+  ]);
+  assert.deepEqual(findNewSlotLines(oldSlots, oldSlots.slice().reverse()), []);
+  assert.deepEqual(findNewSlotLines(oldSlots, [oldSlots[0]]), []);
+});
+
+test("hasNewSlotLines ignores removals and reordering", () => {
+  const oldSlots = [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Tiistai 2.6.2026 08:00–16:00",
+  ];
+  const removedOnly = ["Maanantai 1.6.2026 08:00–16:00"];
+  const reordered = oldSlots.slice().reverse();
+  const withNewSlot = [...reordered, "Keskiviikko 3.6.2026 08:00–16:00"];
+
+  assert.equal(hasNewSlotLines(oldSlots, removedOnly), false);
+  assert.equal(hasNewSlotLines(oldSlots, reordered), false);
+  assert.equal(hasNewSlotLines(oldSlots, withNewSlot), true);
 });

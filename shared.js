@@ -48,9 +48,27 @@
   }
 
   function urlMatches(pattern, url) {
-    return String(url || "")
-      .toLowerCase()
-      .includes(String(pattern || "").toLowerCase());
+    const normalizedPattern = normalizeUrlOrigin(pattern);
+    const normalizedUrl = normalizeUrlOrigin(url);
+
+    return normalizedPattern && normalizedUrl
+      ? normalizedPattern === normalizedUrl
+      : false;
+  }
+
+  function normalizeUrlOrigin(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+
+    try {
+      return new URL(text).origin.toLowerCase();
+    } catch {
+      try {
+        return new URL(`https://${text}`).origin.toLowerCase();
+      } catch {
+        return "";
+      }
+    }
   }
 
   function shouldMonitorTab(settings, rule, tabUrl) {

@@ -2,13 +2,13 @@
 
 ## Overview
 
-Vuoropäivittäjä is a Chrome Manifest V3 slot-reserving helper. It watches one page, clicks a configured refresh control on a schedule, compares the visible slot list before and after the click, and alerts the user when the list changes.
+Vuoropäivittäjä is a Chrome Manifest V3 slot-reserving helper. It watches one page, clicks a configured refresh control on a schedule, compares the visible slot list before and after the click, and alerts the user when new slot lines appear.
 
 ## Product contract
 
 - One monitored site at a time.
 - The active tab origin is the source of truth. The user does not type a URL.
-- The system detects slot-list changes, not semantic appointment verification.
+- The system detects newly available slot lines, not semantic appointment verification.
 - New slots are expected to appear first, in descending time order.
 - Monitoring can continue while the tab is in the background.
 - Closing the last matching monitored tab disables monitoring automatically.
@@ -93,13 +93,13 @@ The popup should be modern, clean, minimal, compact, and accessible.
 - The user can start the element picker from the popup.
 - The user can test the configured selector from the popup.
 - The popup should restore the last picked selector when available.
-- When monitoring is active, all configuration inputs (interval, selector, picker, test) are disabled. Notification and sound toggles remain editable at all times.
+- When monitoring is enabled, all configuration inputs (interval, selector, picker, test) are disabled. Notification and sound toggles remain editable at all times.
 
 ### Two-column layout
 
 The popup is divided into two columns:
 
-- **Left column**: all existing controls (origin display, settings, picker, test button).
+- **Left column**: settings, picker, and test control.
 - **Right column**: slot history list.
 
 Both columns are visible simultaneously. The popup width should expand to accommodate both columns comfortably.
@@ -123,7 +123,7 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 - The refresh control can live inside a frame, and the chosen selector must still work when tested later.
 - The monitored snapshot should prefer the visible slot list when it exists, and fall back to page text when it does not.
 - The comparison should be based on the visible content before and after the refresh click.
-- When the snapshot changes, the extension sends an alert request to the background worker.
+- When the refreshed snapshot contains new slot lines, the extension sends an alert request to the background worker.
 - When the snapshot changes, the content script parses the current slot list into individual lines and includes them in the alert message so the background worker can update the slot history.
 - A failed monitor cycle must not crash the content script or block later cycles.
 
@@ -207,5 +207,5 @@ Manual verification:
 
 - Load the unpacked extension after manifest changes.
 - Open the local test page and confirm picker, test click, monitoring, notification, and sound.
-- On the real PowerApps page, confirm the picker selects the refresh button, `Testaa` clicks the same control, and no unintended `/open/...` navigation appears.
+- On the real PowerApps page, confirm the picker selects the refresh button, the test control clicks the same control, and no unintended `/open/...` navigation appears.
 - Confirm closing the last monitored tab disables monitoring.

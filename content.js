@@ -12,8 +12,12 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     isContextInvalidated,
     STRINGS,
   } = globalThis.VuoropaivittajaShared;
-  const { shouldStartMonitoring, snapshotsAreEqual, parseSlotText } =
-    globalThis.VuoropaivittajaContentHelpers;
+  const {
+    shouldStartMonitoring,
+    snapshotsAreEqual,
+    parseSlotText,
+    hasNewSlotLines,
+  } = globalThis.VuoropaivittajaContentHelpers;
 
   let lastUrl = location.href;
   let pickerState = null;
@@ -203,6 +207,9 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       );
       if (monitoringSession !== session) break;
 
+      const beforeSlots = rule.listSelector
+        ? snapshotListItems(rule.listSelector)
+        : [];
       const before = takeSnapshot(rule.listSelector);
       const clickResult = clickSelectorInPage(rule.selector);
       logger.info("Refresh button processed", {
@@ -225,21 +232,27 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (monitoringSession !== session) break;
 
       const after = takeSnapshot(rule.listSelector);
+      const afterSlots = rule.listSelector
+        ? snapshotListItems(rule.listSelector)
+        : [];
 
       if (rule.listSelector) {
-        const slots = snapshotListItems(rule.listSelector);
-        if (slots.length > 0) {
+        if (afterSlots.length > 0) {
           void chrome.runtime
             .sendMessage({
               type: "update-slot-history",
               urlPattern: rule.urlPattern,
-              slots,
+              slots: afterSlots,
             })
             .catch(() => {});
         }
       }
 
-      if (!snapshotsAreEqual(before, after)) {
+      const hasNewSlots = rule.listSelector
+        ? hasNewSlotLines(beforeSlots, afterSlots)
+        : !snapshotsAreEqual(before, after);
+
+      if (hasNewSlots) {
         logger.info("Snapshot change detected", {
           event: "change-detected",
           session,

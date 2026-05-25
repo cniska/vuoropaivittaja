@@ -37,10 +37,36 @@
     return [dow, date, time].filter(Boolean).join(" ").trim();
   }
 
+  function normalizeSlotLines(lines) {
+    return Array.isArray(lines)
+      ? lines.map((line) => String(line || "").trim()).filter(Boolean)
+      : [];
+  }
+
+  function findNewSlotLines(before, after) {
+    const beforeSet = new Set(normalizeSlotLines(before));
+    const seen = new Set();
+
+    return normalizeSlotLines(after).filter((line) => {
+      if (beforeSet.has(line) || seen.has(line)) {
+        return false;
+      }
+
+      seen.add(line);
+      return true;
+    });
+  }
+
+  function hasNewSlotLines(before, after) {
+    return findNewSlotLines(before, after).length > 0;
+  }
+
   const api = {
     shouldStartMonitoring,
     snapshotsAreEqual,
     parseSlotText,
+    findNewSlotLines,
+    hasNewSlotLines,
   };
 
   globalScope.VuoropaivittajaContentHelpers = api;
