@@ -11,12 +11,14 @@ Use this skill when preparing a new release for the Vuoropäivittäjä extension
 
 1. Keep `CHANGELOG.md` high-signal only: features and bugfixes.
 2. Add the next dated version section directly in `CHANGELOG.md`.
-3. Run `pnpm release <version>` from the repo root.
+3. Run `pnpm release <version> [destinationDir]` from the repo root.
 
 The release script:
 
+- requires a matching dated version section in `CHANGELOG.md`
 - bumps `manifest.json`
 - runs `pnpm test` and `pnpm check`
-- writes `~/Downloads/vuoropaivittaja-<version>.zip`
+- writes `releases/vuoropaivittaja-<version>.zip` by default
+- accepts an optional destination directory as the third argument
 
 Version source of truth is `manifest.json`.

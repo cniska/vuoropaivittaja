@@ -22,6 +22,4 @@
 
 ## Releasing
 
-- Keep `CHANGELOG.md` high-signal only: features and bugfixes.
-- Add the next dated version section to `CHANGELOG.md` before a release.
-- Run `pnpm release <version>` to bump `manifest.json`, run checks, and create `~/Downloads/vuoropaivittaja-<version>.zip`.
+- Use [.agents/skills/release/SKILL.md](./.agents/skills/release/SKILL.md) for the release workflow.
