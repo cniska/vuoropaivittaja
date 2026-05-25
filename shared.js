@@ -1,7 +1,7 @@
 (function initializeVuoropaivittajaShared(globalScope) {
   const DEFAULT_MIN_INTERVAL_MS = 30000;
   const DEFAULT_MAX_INTERVAL_MS = 90000;
-  const ABSOLUTE_MIN_INTERVAL_MS = 2000;
+  const ABSOLUTE_MIN_INTERVAL_MS = 5000;
   const SLOT_HISTORY_CAP = 500;
 
   function normalizeSettings(value) {

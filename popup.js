@@ -12,7 +12,7 @@ const RULE_KEY = "rule";
 const PICK_RESULT_KEY = "lastPickedElement";
 const DRAFT_KEY = "draftRule";
 const SLOT_HISTORY_KEY = "slotHistory";
-const MIN_INTERVAL_S = 2;
+const MIN_INTERVAL_S = 5;
 const STATUS_DISMISS_MS = 5000;
 const HISTORY_PAGE_SIZE = 20;
 
