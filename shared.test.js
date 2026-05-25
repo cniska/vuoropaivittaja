@@ -316,6 +316,39 @@ test("mergeSlotHistory enforces cap by dropping oldest firstSeen entries", () =>
   assert.ok(result.some((e) => e.text === newSlot));
 });
 
+test("mergeSlotHistory marks slots missing from snapshot with removedAt", () => {
+  const slotA = "Ma 26.5. 08:00–16:00";
+  const slotB = "Ti 27.5. 12:00–20:00";
+  const existing = [
+    { text: slotA, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z" },
+    { text: slotB, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z" },
+  ];
+  const result = mergeSlotHistory(existing, [slotB]);
+  const a = result.find((e) => e.text === slotA);
+  const b = result.find((e) => e.text === slotB);
+  assert.ok(a.removedAt, "missing slot should have removedAt");
+  assert.ok(!b.removedAt, "present slot should not have removedAt");
+});
+
+test("mergeSlotHistory clears removedAt when a slot reappears", () => {
+  const slot = "Ma 26.5. 08:00–16:00";
+  const existing = [
+    { text: slot, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z", removedAt: "2026-01-02T00:00:00.000Z" },
+  ];
+  const result = mergeSlotHistory(existing, [slot]);
+  assert.ok(!result[0].removedAt, "removedAt should be cleared on reappearance");
+});
+
+test("mergeSlotHistory does not re-mark already removed slots", () => {
+  const slot = "Ma 26.5. 08:00–16:00";
+  const removedAt = "2026-01-02T00:00:00.000Z";
+  const existing = [
+    { text: slot, firstSeen: "2026-01-01T00:00:00.000Z", lastSeen: "2026-01-01T00:00:00.000Z", removedAt },
+  ];
+  const result = mergeSlotHistory(existing, ["Ti 27.5. 12:00–20:00"]);
+  assert.equal(result.find((e) => e.text === slot).removedAt, removedAt);
+});
+
 test("mergeSlotHistory does not mutate the existing array", () => {
   const slot = "Ma\n26.5.\n08:00–16:00";
   const existing = [

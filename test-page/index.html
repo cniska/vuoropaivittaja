@@ -137,12 +137,13 @@
         padding: 8px 16px;
         font-size: 11px;
         color: #94a3b8;
+        background: #f8fafc;
         display: flex;
         gap: 16px;
       }
 
-      .stat-value { font-weight: 700; color: #0f172a; }
-      .stat-value[data-highlight] { color: #15803d; }
+      .stat-value { font-weight: 700; color: #64748b; }
+      .stat-value[data-highlight] { color: #15803d; font-weight: 700; }
     </style>
   </head>
   <body>
@@ -175,6 +176,7 @@
           <span>Näkyvissä: <span class="stat-value" id="stat-visible">0</span></span>
           <span>Jonossa: <span class="stat-value" id="stat-queued">0</span></span>
           <span>Lisätty: <span class="stat-value" id="stat-added">0</span></span>
+          <span>Poistettu: <span class="stat-value" id="stat-removed">0</span></span>
           <span>Tulossa: <span class="stat-value" id="stat-remaining">0</span></span>
           <span>Klikkauksia: <span class="stat-value" id="stat-clicks">0</span></span>
         </div>
@@ -215,12 +217,16 @@
 
       // 1 in 4 ticks produces a new slot
       const ARRIVAL_PATTERN = [true, false, false, false];
+      // 1 in 3 refreshes removes a slot
+      const REMOVAL_PATTERN = [false, false, true];
 
       const visibleSlots = INITIAL_SLOTS.map((s) => ({ ...s }));
       const pendingSlots = [];
       let arrivalIndex = 0;
+      let removalIndex = 0;
       let clickCount = 0;
       let addedCount = 0;
+      let removedCount = 0;
 
       function renderSlots() {
         const list = document.querySelector('[role="list"]');
@@ -246,6 +252,7 @@
         queuedEl.textContent = queued;
         queuedEl.toggleAttribute("data-highlight", queued > 0);
         document.getElementById("stat-added").textContent = addedCount;
+        document.getElementById("stat-removed").textContent = removedCount;
         document.getElementById("stat-remaining").textContent = UPCOMING_SLOTS.length;
         document.getElementById("stat-clicks").textContent = clickCount;
       }
@@ -269,6 +276,15 @@
           visibleSlots.unshift(...pendingSlots);
           pendingSlots.length = 0;
         }
+        if (REMOVAL_PATTERN[removalIndex % REMOVAL_PATTERN.length]) {
+          const oldSlots = visibleSlots.filter((s) => !s.isNew);
+          if (oldSlots.length > 0) {
+            const target = oldSlots[oldSlots.length - 1];
+            visibleSlots.splice(visibleSlots.lastIndexOf(target), 1);
+            removedCount++;
+          }
+        }
+        removalIndex++;
         renderSlots();
         updateStatus();
       }

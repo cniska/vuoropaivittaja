@@ -156,15 +156,23 @@
 
     const now = new Date().toISOString();
     const byText = new Map(base.map((e) => [e.text, { ...e }]));
+    const currentTexts = new Set(
+      newLines.map((line) => String(line || "").trim()).filter(Boolean)
+    );
 
-    for (const line of newLines) {
-      const text = String(line || "").trim();
-      if (!text) continue;
-
+    for (const text of currentTexts) {
       if (byText.has(text)) {
-        byText.get(text).lastSeen = now;
+        const entry = byText.get(text);
+        entry.lastSeen = now;
+        delete entry.removedAt;
       } else {
         byText.set(text, { text, firstSeen: now, lastSeen: now });
+      }
+    }
+
+    for (const [text, entry] of byText) {
+      if (!currentTexts.has(text) && !entry.removedAt) {
+        entry.removedAt = now;
       }
     }
 
@@ -215,6 +223,7 @@
     historyLoadMore: (n) => `Lataa lisää (${n})`,
     historyTotal: (n) => `Yhteensä <strong>${n}</strong> vuoroa`,
     historyLastSeen: (ts) => `Viimeksi nähty ${ts}`,
+    historyBooked: (firstTs, removedTs) => `Ilmestyi ${firstTs} · Varattu ${removedTs}`,
 
     // In-page picker & click results
     pickerHint: "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",

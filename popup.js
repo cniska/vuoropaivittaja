@@ -306,6 +306,9 @@ clearHistoryButton.addEventListener("click", async () => {
 
 function setHistoryEntries(entries) {
   historyEntries = entries.slice().sort((a, b) => {
+    const aBooked = Boolean(a.removedAt);
+    const bBooked = Boolean(b.removedAt);
+    if (aBooked !== bBooked) return aBooked ? 1 : -1;
     const dateA = parseSlotDate(a.text);
     const dateB = parseSlotDate(b.text);
     if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
@@ -331,12 +334,19 @@ function renderHistory() {
   const hasMore = historyVisible < total;
 
   const items = visible
-    .map(
-      (entry) => `<div role="listitem" class="history-item">
+    .map((entry) => {
+      const isBooked = Boolean(entry.removedAt);
+      const meta = isBooked
+        ? STRINGS.historyBooked(
+            formatTimestamp(entry.firstSeen),
+            formatTimestamp(entry.removedAt)
+          )
+        : STRINGS.historyLastSeen(formatTimestamp(entry.lastSeen));
+      return `<div role="listitem" class="history-item${isBooked ? " history-item--booked" : ""}">
         <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
-        <span class="history-item-meta">${STRINGS.historyLastSeen(formatTimestamp(entry.lastSeen))}</span>
-      </div>`
-    )
+        <span class="history-item-meta">${meta}</span>
+      </div>`;
+    })
     .join("");
 
   const loadMore = hasMore
