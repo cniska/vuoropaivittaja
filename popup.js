@@ -111,7 +111,7 @@ async function autosaveSettings() {
       event: "autosave-settings",
       ...nextSettings,
     });
-    setStatus("Tallennettu.");
+    setStatus("Muutokset tallennettu.");
   } catch (error) {
     logger.error("Settings save failed", {
       event: "autosave-settings-failed",
@@ -133,7 +133,7 @@ async function autosaveRule(showToast = true) {
       [RULE_KEY]: nextRule,
     });
     if (showToast) {
-      setStatus("Tallennettu.");
+      setStatus("Muutokset tallennettu.");
     }
     logger.info("Selector saved", {
       event: "autosave-rule",
