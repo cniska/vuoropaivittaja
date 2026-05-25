@@ -3,6 +3,7 @@ const {
   normalizeRule,
   normalizeSlotHistoryMap,
   createLogger,
+  parseSlotDate,
 } = globalThis.VuoropaivittajaShared;
 
 const SETTINGS_KEY = "settings";
@@ -12,7 +13,7 @@ const DRAFT_KEY = "draftRule";
 const SLOT_HISTORY_KEY = "slotHistory";
 const MIN_INTERVAL_S = 2;
 const STATUS_DISMISS_MS = 5000;
-const HISTORY_PAGE_SIZE = 10;
+const HISTORY_PAGE_SIZE = 20;
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -302,12 +303,6 @@ function setHistoryEntries(entries) {
   renderHistory();
 }
 
-function parseSlotDate(text) {
-  const match = text.match(/(\d{1,2})\.(\d{1,2})\./);
-  if (!match) return "";
-  return `${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}`;
-}
-
 function renderHistory() {
   const total = historyEntries.length;
 
@@ -331,7 +326,7 @@ function renderHistory() {
 
   const loadMore = hasMore
     ? `<button type="button" class="history-load-more" id="history-load-more">Lataa lisää (${total - historyVisible})</button>`
-    : "";
+    : `<p class="history-total">Yhteensä <strong>${total}</strong> vuoroa</p>`;
 
   historyList.innerHTML = items + loadMore;
 

@@ -178,6 +178,15 @@
     return merged;
   }
 
+  function parseSlotDate(text) {
+    const match = String(text || "").match(/(\d{1,2})\.(\d{1,2})\.(\d{4})?/);
+    if (!match) return "";
+    const year = match[3] ?? "";
+    const mm = match[2].padStart(2, "0");
+    const dd = match[1].padStart(2, "0");
+    return year ? `${year}-${mm}-${dd}` : `${mm}-${dd}`;
+  }
+
   const api = {
     normalizeSettings,
     normalizeRule,
@@ -189,6 +198,7 @@
     urlMatches,
     looksLikeXPath,
     isStableIdentifier,
+    parseSlotDate,
   };
 
   globalScope.VuoropaivittajaShared = api;

@@ -11,6 +11,7 @@ const {
   urlMatches,
   looksLikeXPath,
   isStableIdentifier,
+  parseSlotDate,
 } = require("./shared.js");
 
 // normalizeSettings
@@ -344,6 +345,41 @@ test("normalizeSlotHistoryMap returns empty object for null and primitives", () 
   assert.deepEqual(normalizeSlotHistoryMap(undefined), {});
   assert.deepEqual(normalizeSlotHistoryMap("string"), {});
   assert.deepEqual(normalizeSlotHistoryMap(42), {});
+});
+
+// parseSlotDate
+
+test("parseSlotDate returns YYYY-MM-DD when year is present", () => {
+  assert.equal(parseSlotDate("Lauantai 22.6.2026 20:00 - 21:00"), "2026-06-22");
+  assert.equal(parseSlotDate("Pe 29.5.2026 20:00 - 21:00"), "2026-05-29");
+  assert.equal(parseSlotDate("6.6.2026"), "2026-06-06");
+});
+
+test("parseSlotDate returns MM-DD when year is absent", () => {
+  assert.equal(parseSlotDate("Ke 28.5. 06:00–14:00"), "05-28");
+});
+
+test("parseSlotDate returns empty string when no date found", () => {
+  assert.equal(parseSlotDate("Ei päivämäärää"), "");
+  assert.equal(parseSlotDate(""), "");
+});
+
+test("parseSlotDate sorts correctly for ascending date order", () => {
+  const dates = [
+    "Lauantai 22.6.2026 20:00 - 21:00",
+    "Lauantai 30.5.2026 20:00 - 21:00",
+    "Perjantai 29.5.2026 20:00 - 21:00",
+    "Perjantai 6.6.2026 20:00 - 21:00",
+  ];
+  const sorted = dates
+    .slice()
+    .sort((a, b) => parseSlotDate(a).localeCompare(parseSlotDate(b)));
+  assert.deepEqual(sorted, [
+    "Perjantai 29.5.2026 20:00 - 21:00",
+    "Lauantai 30.5.2026 20:00 - 21:00",
+    "Perjantai 6.6.2026 20:00 - 21:00",
+    "Lauantai 22.6.2026 20:00 - 21:00",
+  ]);
 });
 
 // isStableIdentifier
