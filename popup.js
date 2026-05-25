@@ -242,7 +242,6 @@ function setStatus(message, isError = false) {
   });
   statusTimer = window.setTimeout(() => {
     statusEl.classList.remove("is-visible");
-    statusEl.textContent = "";
   }, STATUS_DISMISS_MS);
 }
 
