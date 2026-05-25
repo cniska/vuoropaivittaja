@@ -9,6 +9,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     createLogger,
     looksLikeXPath,
     isStableIdentifier,
+    STRINGS,
   } = globalThis.VuoropaivittajaShared;
   const { shouldStartMonitoring, snapshotsAreEqual, parseSlotText } =
     globalThis.VuoropaivittajaContentHelpers;
@@ -32,7 +33,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       startPicker();
       sendResponse({
         ok: true,
-        message: "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",
+        message: STRINGS.pickerHint,
       });
       return false;
     }
@@ -73,14 +74,14 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (!selector) {
         sendResponse({
           ok: false,
-          error: "Syötä valitsin ensin.",
+          error: STRINGS.enterSelectorFirst,
         });
         return false;
       }
 
       const result = clickSelectorInPage(selector);
       if (result.clicked) {
-        sendResponse({ ok: true, message: "Painike klikattu onnistuneesti." });
+        sendResponse({ ok: true, message: STRINGS.clickSuccess });
         return false;
       }
       if (isTopFrame()) {
@@ -212,7 +213,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
           type: "monitor-clicked",
           ok: clickResult.clicked,
           message: clickResult.clicked
-            ? "Päivitä-painiketta klikattiin."
+            ? STRINGS.monitorClicked
             : clickResult.message,
         })
         .catch(() => {});
@@ -368,8 +369,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
     const hint = document.createElement("div");
     hint.dataset.autoClickerOverlay = "true";
-    hint.textContent =
-      "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.";
+    hint.textContent = STRINGS.pickerHint;
     hint.style.position = "fixed";
     hint.style.top = "16px";
     hint.style.right = "16px";
@@ -838,14 +838,14 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       if (!xpathElement) {
         return {
           clicked: false,
-          message: "XPath ei löytänyt yhtään elementtiä sivulta.",
+          message: STRINGS.selectorNotFound,
         };
       }
 
       triggerElementInteraction(xpathElement);
       return {
         clicked: true,
-        message: "XPath-elementti klikattu onnistuneesti.",
+        message: STRINGS.clickSuccess,
       };
     }
 
@@ -865,7 +865,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         triggerElementInteraction(element);
         return {
           clicked: true,
-          message: "Painike klikattu onnistuneesti.",
+          message: STRINGS.clickSuccess,
         };
       }
 
@@ -879,7 +879,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
 
     return {
       clicked: false,
-      message: "Valitsinta ei löydetty sivulta.",
+      message: STRINGS.selectorNotFound,
     };
   }
 

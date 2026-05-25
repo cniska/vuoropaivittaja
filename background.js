@@ -8,6 +8,7 @@ const {
   normalizeSlotHistoryMap,
   urlMatches,
   createLogger,
+  STRINGS,
 } = self.VuoropaivittajaShared;
 
 const OFFSCREEN_DOCUMENT = "offscreen.html";
@@ -188,8 +189,8 @@ async function createNotification() {
     await chrome.notifications.create(notificationId(), {
       type: "basic",
       iconUrl: chrome.runtime.getURL("icon.png"),
-      title: "Vuoropäivittäjä",
-      message: "Uusia vuoroja saattaa olla saatavilla.",
+      title: STRINGS.notificationTitle,
+      message: STRINGS.notificationBody,
     });
     logger.info("Desktop notification sent", {
       event: "notification-created",

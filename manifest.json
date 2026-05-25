@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Vuoropäivittäjä",
   "version": "1.0.0",
-  "description": "Tarkkailee varattavia vuoroja ja ilmoittaa uusista ajoista.",
+  "description": "Seuraa vuorolistaa automaattisesti ja ilmoittaa, kun uusia vuoroja ilmestyy.",
   "minimum_chrome_version": "120",
   "permissions": [
     "notifications",

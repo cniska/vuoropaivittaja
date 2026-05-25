@@ -187,6 +187,43 @@
     return year ? `${year}-${mm}-${dd}` : `${mm}-${dd}`;
   }
 
+  const STRINGS = {
+    // Toasts
+    saved: "Tallennettu.",
+    saveFailed: "Tallennus epäonnistui.",
+    openTargetFirst: "Avaa kohdesivusto ensin.",
+    pickerFailed:
+      "Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä.",
+    enterSelectorFirst: "Syötä valitsin ensin.",
+    testing: "Testataan...",
+    connectionFailed: "Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.",
+    elementPicked: "Painike valittu sivulta.",
+    monitorClicked: "Painiketta klikattiin.",
+    testFailed: "Testi epäonnistui.",
+    clearHistoryFailed: "Historian tyhjennys epäonnistui.",
+
+    // Dialogs
+    confirmClearHistory: "Tyhjennetäänkö koko vuorohistoria?",
+
+    // UI labels
+    noTargetSet: "Ei asetettu",
+
+    // History panel
+    historyEmpty: "Ei tallennettuja vuoroja.",
+    historyLoadMore: (n) => `Lataa lisää (${n})`,
+    historyTotal: (n) => `Yhteensä <strong>${n}</strong> vuoroa`,
+    historyLastSeen: (ts) => `Viimeksi nähty ${ts}`,
+
+    // In-page picker & click results
+    pickerHint: "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",
+    clickSuccess: "Painike klikattu onnistuneesti.",
+    selectorNotFound: "Valitsinta ei löydetty sivulta.",
+
+    // Desktop notification
+    notificationTitle: "Vuoropäivittäjä",
+    notificationBody: "Uusia vuoroja saattaa olla saatavilla.",
+  };
+
   const api = {
     normalizeSettings,
     normalizeRule,
@@ -199,6 +236,7 @@
     looksLikeXPath,
     isStableIdentifier,
     parseSlotDate,
+    STRINGS,
   };
 
   globalScope.VuoropaivittajaShared = api;

@@ -4,6 +4,7 @@ const {
   normalizeSlotHistoryMap,
   createLogger,
   parseSlotDate,
+  STRINGS,
 } = globalThis.VuoropaivittajaShared;
 
 const SETTINGS_KEY = "settings";
@@ -46,7 +47,7 @@ chrome.runtime.onMessage.addListener((message) => {
       message: String(message.message || ""),
     });
     setStatus(
-      String(message.message || "Päivitä-painiketta klikattiin."),
+      String(message.message || STRINGS.monitorClicked),
       !message.ok
     );
   }
@@ -112,13 +113,13 @@ async function autosaveSettings() {
       event: "autosave-settings",
       ...nextSettings,
     });
-    setStatus("Muutokset tallennettu.");
+    setStatus(STRINGS.saved);
   } catch (error) {
     logger.error("Settings save failed", {
       event: "autosave-settings-failed",
       message: String(error?.message || error || ""),
     });
-    setStatus("Tallennus epäonnistui.", true);
+    setStatus(STRINGS.saveFailed, true);
   }
 }
 
@@ -134,7 +135,7 @@ async function autosaveRule(showToast = true) {
       [RULE_KEY]: nextRule,
     });
     if (showToast) {
-      setStatus("Muutokset tallennettu.");
+      setStatus(STRINGS.saved);
     }
     logger.info("Selector saved", {
       event: "autosave-rule",
@@ -145,13 +146,13 @@ async function autosaveRule(showToast = true) {
       event: "autosave-rule-failed",
       message: String(error?.message || error || ""),
     });
-    setStatus("Tallennus epäonnistui.", true);
+    setStatus(STRINGS.saveFailed, true);
   }
 }
 
 pickElementButton.addEventListener("click", async () => {
   if (!activeTab?.id) {
-    setStatus("Avaa kohdesivusto ensin.", true);
+    setStatus(STRINGS.openTargetFirst, true);
     return;
   }
 
@@ -162,7 +163,7 @@ pickElementButton.addEventListener("click", async () => {
     window.close();
   } catch {
     setStatus(
-      "Valitsin ei käynnistynyt. Lataa sivu uudelleen ja yritä uudelleen.",
+      STRINGS.pickerFailed,
       true
     );
   }
@@ -170,18 +171,18 @@ pickElementButton.addEventListener("click", async () => {
 
 testSelectorButton.addEventListener("click", async () => {
   if (!activeTab?.id) {
-    setStatus("Avaa kohdesivusto ensin.", true);
+    setStatus(STRINGS.openTargetFirst, true);
     return;
   }
 
   const selector = selectorInput.value.trim();
   if (!selector) {
-    setStatus("Syötä valitsin ensin.", true);
+    setStatus(STRINGS.enterSelectorFirst, true);
     return;
   }
 
   try {
-    setStatus("Testataan...");
+    setStatus(STRINGS.testing);
     logger.info("Testing selector", {
       event: "test-selector",
       selector,
@@ -197,11 +198,11 @@ testSelectorButton.addEventListener("click", async () => {
     setStatus(
       response?.ok
         ? response.message
-        : (response?.error ?? "Testi epäonnistui."),
+        : (response?.error ?? STRINGS.testFailed),
       !response?.ok
     );
   } catch {
-    setStatus("Sivuun ei saatu yhteyttä. Lataa sivu uudelleen ja yritä.", true);
+    setStatus(STRINGS.connectionFailed, true);
   }
 });
 
@@ -216,7 +217,7 @@ function fillSettings(settings) {
 
 function fillRule(rule) {
   if (rule) selectorInput.value = rule.selector;
-  targetUrlDisplay.textContent = urlPatternFromTab() || "Ei asetettu";
+  targetUrlDisplay.textContent = urlPatternFromTab() || STRINGS.noTargetSet;
 }
 
 function setStatus(message, isError = false) {
@@ -268,7 +269,7 @@ async function loadPickedElement() {
       : null;
   await autosaveRule(false);
   await chrome.storage.local.remove(PICK_RESULT_KEY);
-  setStatus("Painike valittu sivulta.");
+  setStatus(STRINGS.elementPicked);
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -278,7 +279,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 });
 
 clearHistoryButton.addEventListener("click", async () => {
-  if (!window.confirm("Tyhjennetäänkö koko vuorohistoria?")) return;
+  if (!window.confirm(STRINGS.confirmClearHistory)) return;
   try {
     const urlPattern = urlPatternFromTab();
     const stored = await chrome.storage.local.get({ [SLOT_HISTORY_KEY]: {} });
@@ -288,7 +289,7 @@ clearHistoryButton.addEventListener("click", async () => {
     });
     setHistoryEntries([]);
   } catch {
-    setStatus("Historian tyhjennys epäonnistui.", true);
+    setStatus(STRINGS.clearHistoryFailed, true);
   }
 });
 
@@ -307,8 +308,7 @@ function renderHistory() {
   const total = historyEntries.length;
 
   if (total === 0) {
-    historyList.innerHTML =
-      '<p class="history-empty">Ei tallennettuja vuoroja.</p>';
+    historyList.innerHTML = `<p class="history-empty">${STRINGS.historyEmpty}</p>`;
     return;
   }
 
@@ -319,14 +319,14 @@ function renderHistory() {
     .map(
       (entry) => `<div role="listitem" class="history-item">
         <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
-        <span class="history-item-meta">Nähty ${formatTimestamp(entry.lastSeen)}</span>
+        <span class="history-item-meta">${STRINGS.historyLastSeen(formatTimestamp(entry.lastSeen))}</span>
       </div>`
     )
     .join("");
 
   const loadMore = hasMore
-    ? `<button type="button" class="history-load-more" id="history-load-more">Lataa lisää (${total - historyVisible})</button>`
-    : `<p class="history-total">Yhteensä <strong>${total}</strong> vuoroa</p>`;
+    ? `<button type="button" class="history-load-more" id="history-load-more">${STRINGS.historyLoadMore(total - historyVisible)}</button>`
+    : `<p class="history-total">${STRINGS.historyTotal(total)}</p>`;
 
   historyList.innerHTML = items + loadMore;
 
