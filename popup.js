@@ -295,8 +295,8 @@ function setHistoryEntries(entries) {
   historyEntries = entries.slice().sort((a, b) => {
     const dateA = parseSlotDate(a.text);
     const dateB = parseSlotDate(b.text);
-    if (dateA && dateB && dateA !== dateB) return dateB.localeCompare(dateA);
-    return b.lastSeen.localeCompare(a.lastSeen);
+    if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+    return a.lastSeen.localeCompare(b.lastSeen);
   });
   historyVisible = HISTORY_PAGE_SIZE;
   renderHistory();
