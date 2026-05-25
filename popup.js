@@ -6,7 +6,7 @@ const {
   parseSlotDate,
   STRINGS,
 } = globalThis.VuoropaivittajaShared;
-const { sortSlotHistoryEntries, getNewHistoryFlashKeys } =
+const { sortSlotHistoryEntries, getNewHistoryFlashKeys, historyEntryKey } =
   globalThis.VuoropaivittajaPopupHelpers;
 
 const SETTINGS_KEY = "settings";

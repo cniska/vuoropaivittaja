@@ -51,6 +51,7 @@
   const api = {
     sortSlotHistoryEntries,
     getNewHistoryFlashKeys,
+    historyEntryKey,
   };
 
   globalScope.VuoropaivittajaPopupHelpers = api;

@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   sortSlotHistoryEntries,
   getNewHistoryFlashKeys,
+  historyEntryKey,
 } = require("./popup-helpers.js");
 const { parseSlotDate } = require("./shared.js");
 
@@ -115,5 +116,15 @@ test("getNewHistoryFlashKeys returns keys for later additions", () => {
   assert.deepEqual(
     [...flashKeys],
     ["2026-05-25T10:00:00.000Z::Torstai 28.5.2026 20:00 - 21:00"]
+  );
+});
+
+test("historyEntryKey combines firstSeen and text", () => {
+  assert.equal(
+    historyEntryKey({
+      firstSeen: "2026-05-25T10:00:00.000Z",
+      text: "Torstai 28.5.2026 20:00 - 21:00",
+    }),
+    "2026-05-25T10:00:00.000Z::Torstai 28.5.2026 20:00 - 21:00"
   );
 });
