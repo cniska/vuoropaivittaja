@@ -75,7 +75,7 @@ Each entry contains:
 - `text`: The visible slot line text as parsed from the slot list. Full Finnish weekday names are stored (e.g. "Lauantai"); abbreviation to 2 letters (e.g. "La") is applied at display time only.
 - `firstSeen`: ISO timestamp of when the slot was first observed.
 - `lastSeen`: ISO timestamp of when the slot was most recently observed.
-- `removedAt`: ISO timestamp set when the slot disappears from a non-empty snapshot (indicating it was booked or removed). Cleared if the slot reappears.
+- `removedAt`: ISO timestamp set when the slot disappears from a non-empty snapshot. This only means the slot is no longer visible; the reason is unknown. Cleared if the slot reappears.
 
 Entries are de-duplicated by `text`. When a known slot text reappears, `lastSeen` is updated and `removedAt` is cleared. When the cap is exceeded, the oldest entries by `firstSeen` are dropped first.
 
@@ -107,11 +107,11 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 ### Slot history column
 
 - Shows all recorded slot entries for the current domain.
-- Active slots (no `removedAt`) are sorted before booked slots; within each group, sorted date ascending; ties broken by `lastSeen` ascending.
+- Active slots (no `removedAt`) are sorted before removed slots; within each group, sorted date ascending; ties broken by `lastSeen` ascending.
 - Weekday names are abbreviated to 2 letters at display time (e.g. "Lauantai" → "La").
 - Each row shows the slot text, a first-seen timestamp, and either a last-seen timestamp or a removed-at timestamp, all formatted in Finnish locale.
-- Booked slots (with `removedAt`) are rendered at reduced opacity.
-- Booked slots show a hover-revealed delete button (×) to remove that individual entry from the domain's history.
+- Removed slots (with `removedAt`) are rendered at reduced opacity.
+- Removed slots show a hover-revealed delete button (×) to remove that individual entry from the domain's history.
 - The first 20 entries are shown initially; a load-more button shows 20 more at a time without resetting position on live updates.
 - A clear button appears above the list; clicking it clears only the current domain's entries after confirmation.
 - The column is accessible with keyboard: load-more, clear, and delete buttons are focusable and operable without a mouse.
@@ -172,13 +172,16 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 
 - Include a local test page that can be served locally through a project script.
 - The test page should resemble a real slot list, not a toy demo.
-- It should have one refresh control and one visible slot list.
+- It should have one refresh control and a three-tab layout: new, accepted, and rejected slots.
+- The new tab is the monitored list. Accepted and rejected tabs are only for explicit row actions.
+- Rows in the new tab expose accept and reject buttons for manual verification.
+- Slots removed by the system disappear from the new list and are not moved into accepted or rejected history.
 - Slot items show full Finnish weekday name, date, and shift. No badge is used.
 - New slots are queued in the background and appear only when refresh is clicked.
-- Adding slots flashes the row green briefly; removed rows fade out in red before disappearing.
+- Adding slots flashes the row green briefly; system-removed rows fade out in red before disappearing.
 - Some refresh cycles intentionally make no visible change so no-change behavior can be verified.
 - New slots appear first in the list.
-- A stat footer shows visible count, queued count, total added, total removed, remaining upcoming slots, and total click count.
+- A stat footer shows visible count, queued count, total added, accepted count, rejected count, total removed, and total click count.
 
 ## Testability requirements
 

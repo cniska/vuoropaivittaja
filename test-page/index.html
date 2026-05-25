@@ -11,59 +11,118 @@
       body {
         font-family: system-ui, sans-serif;
         font-size: 13px;
-        background: #f8fafc;
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
         color: #0f172a;
         min-height: 100vh;
       }
 
-      /* Dev toolbar */
-      .toolbar {
-        background: #fff;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 12px;
-        color: #64748b;
-      }
-
-      .toolbar strong {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: #94a3b8;
-      }
-
-      #state-label { margin-left: auto; }
-
-      /* Page */
       .page {
-        max-width: 680px;
-        margin: 28px auto;
+        max-width: 820px;
+        margin: 18px auto;
         padding: 0 16px;
       }
 
-      /* App card */
-      .card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        overflow: hidden;
+      .page-brand {
+        margin: 0 0 10px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
       }
 
-      .card-header {
-        padding: 12px 16px;
-        border-bottom: 1px solid #e2e8f0;
+      .card {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+        box-shadow: none;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        padding: 0 0 10px;
+        background: transparent;
+      }
+
+      .tab-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #d7e0eb;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        padding: 8px 14px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+      }
+
+      .tab-button:hover {
+        background: #e9eef5;
+      }
+
+      .tab-button[aria-selected="true"] {
+        background: #0f172a;
+        color: #fff;
+        border-color: #0f172a;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+      }
+
+      .tab-button[aria-selected="true"] .tab-count {
+        background: rgba(255, 255, 255, 0.16);
+        color: inherit;
+      }
+
+      .tab-button:focus-visible,
+      .refresh-btn:focus-visible,
+      .slot-action:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 2px;
+      }
+
+      .tab-count {
+        min-width: 20px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.08);
+        color: inherit;
+        font-size: 11px;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .panel-shell {
+        background: #fff;
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+      }
+
+      .tab-panel {
+        background: #fff;
+      }
+
+      .tab-panel[hidden] {
+        display: none;
+      }
+
+      .panel-header {
+        padding: 14px 14px 10px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
       }
 
       .card-title {
-        font-size: 13px;
-        font-weight: 600;
+        font-size: 12px;
+        font-weight: 700;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -72,20 +131,22 @@
       .refresh-btn {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        background: #eff6ff;
-        color: #2563eb;
-        border: none;
-        border-radius: 6px;
+        gap: 6px;
+        background: #eef4ff;
+        color: #1d4ed8;
+        border: 1px solid #d6e3ff;
+        border-radius: 10px;
         padding: 6px 12px;
         font: inherit;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         cursor: pointer;
-        transition: background 0.15s;
+        transition: background 0.15s, transform 0.15s;
       }
 
-      .refresh-btn:hover { background: #dbeafe; }
+      .refresh-btn:hover {
+        background: #dce8ff;
+      }
 
       .refresh-btn svg {
         width: 13px;
@@ -93,221 +154,572 @@
         fill: currentColor;
       }
 
-      /* Slot list */
-      .slot-list { display: flex; flex-direction: column; }
+      .slot-list {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .slot-list .slot-item:first-child {
+        border-top: 1px solid #f1f5f9;
+      }
 
       .slot-item {
         display: grid;
-        grid-template-columns: 90px 160px 1fr;
+        grid-template-columns: 90px 160px 1fr auto;
         align-items: center;
-        padding: 10px 16px;
+        padding: 8px 14px;
         border-bottom: 1px solid #f1f5f9;
         gap: 12px;
         animation: fadeIn 0.15s ease;
       }
 
-      .slot-item:last-child { border-bottom: none; }
+      .slot-item--history {
+        grid-template-columns: 90px 160px 1fr;
+      }
 
-      .slot-date { color: #64748b; }
-      .slot-weekday { font-weight: 500; }
+      .slot-item:last-child {
+        border-bottom: none;
+      }
+
+      .slot-date {
+        color: #64748b;
+        white-space: nowrap;
+      }
+
+      .slot-weekday {
+        font-weight: 600;
+      }
+
+      .slot-time {
+        white-space: nowrap;
+      }
 
       @keyframes flashGreen {
         0%   { background: rgba(21, 128, 61, 0.14); }
         100% { background: transparent; }
       }
+
       @keyframes flashRed {
         0%   { background: rgba(185, 28, 28, 0.1); opacity: 1; }
         100% { background: transparent; opacity: 0; }
       }
 
-      .slot-item--added   { animation: flashGreen 1s ease; }
-      .slot-item--removing { animation: flashRed 0.6s ease forwards; }
+      .slot-item--added {
+        animation: flashGreen 1s ease;
+      }
+
+      .slot-item--removing {
+        animation: flashRed 0.6s ease forwards;
+      }
+
+      .slot-item--accepted-history {
+        opacity: 0.9;
+      }
+
+      .slot-item--rejected-history {
+        opacity: 0.82;
+      }
+
+      .slot-actions {
+        display: inline-flex;
+        gap: 6px;
+        opacity: 0;
+        transform: translateY(2px);
+        pointer-events: none;
+        transition: opacity 0.15s, transform 0.15s;
+      }
+
+      .slot-item:hover .slot-actions,
+      .slot-item:focus-within .slot-actions {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      .slot-action {
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: #fff;
+        color: #0f172a;
+        padding: 4px 8px;
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+      }
+
+      .slot-action:hover {
+        border-color: #94a3b8;
+        background: #f8fafc;
+      }
+
+      .slot-action--accept:hover {
+        border-color: #16a34a;
+        color: #166534;
+      }
+
+      .slot-action--reject:hover {
+        border-color: #dc2626;
+        color: #991b1b;
+      }
+
+      .slot-action:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
 
       .empty-state {
-        padding: 32px 16px;
+        padding: 28px 16px;
         text-align: center;
         color: #94a3b8;
       }
 
       .card-footer {
         border-top: 1px solid #e2e8f0;
-        padding: 8px 16px;
+        padding: 7px 14px;
         font-size: 11px;
         color: #94a3b8;
-        background: #f8fafc;
+        background: #fafcff;
         display: flex;
-        gap: 16px;
+        flex-wrap: wrap;
+        gap: 14px 16px;
       }
 
-      .stat-value { font-weight: 700; color: #64748b; }
-      .stat-value[data-highlight] { color: #15803d; font-weight: 700; }
+      .stat-value {
+        font-weight: 700;
+        color: #64748b;
+      }
+
+      .stat-value[data-highlight] {
+        color: #15803d;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
     </style>
   </head>
   <body>
-    <div class="toolbar">
-      <strong>Testipaneeli</strong>
-    </div>
-
     <div class="page">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Varattavat vuorot</span>
+      <div class="page-brand">Vuoropäivittäjä testisivu</div>
+      <div class="tabs" role="tablist" aria-label="Vuorojen tilat">
           <button
-            class="refresh-btn"
-            aria-label="Päivitä vuorolista"
-            data-control-name="refresh_button"
+            type="button"
+            class="tab-button"
+            id="tab-new"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-new"
+            data-tab="new"
           >
-            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-            </svg>
-            Päivitä luettelo
+            Uudet
+            <span class="tab-count" id="count-new">0</span>
           </button>
+          <button
+            type="button"
+            class="tab-button"
+            id="tab-accepted"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-accepted"
+            data-tab="accepted"
+          >
+            Hyväksytyt
+            <span class="tab-count" id="count-accepted">0</span>
+          </button>
+          <button
+            type="button"
+            class="tab-button"
+            id="tab-rejected"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-rejected"
+            data-tab="rejected"
+          >
+            Hylätyt
+            <span class="tab-count" id="count-rejected">0</span>
+          </button>
+      </div>
+
+      <div class="panel-shell">
+        <div class="tab-panel" id="panel-new" data-tab-panel="new" role="tabpanel" aria-labelledby="tab-new">
+          <div class="panel-header">
+            <span class="card-title">Varattavat vuorot</span>
+            <button
+              class="refresh-btn"
+              aria-label="Päivitä vuorolista"
+              data-control-name="refresh_button"
+              type="button"
+            >
+              <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+              </svg>
+              Päivitä luettelo
+            </button>
+          </div>
+          <div id="new-slot-list" role="list" aria-label="Uudet vuorot" class="slot-list"></div>
         </div>
 
-        <div role="list" aria-label="Vuorolista" class="slot-list">
-          <!-- rendered by JS -->
+        <div class="tab-panel" id="panel-accepted" data-tab-panel="accepted" role="tabpanel" aria-labelledby="tab-accepted" hidden>
+          <div class="panel-header">
+            <span class="card-title">Hyväksytyt vuorot</span>
+          </div>
+          <div id="accepted-slot-list" role="list" aria-label="Hyväksytyt vuorot" class="slot-list"></div>
+        </div>
+
+        <div class="tab-panel" id="panel-rejected" data-tab-panel="rejected" role="tabpanel" aria-labelledby="tab-rejected" hidden>
+          <div class="panel-header">
+            <span class="card-title">Hylätyt vuorot</span>
+          </div>
+          <div id="rejected-slot-list" role="list" aria-label="Hylätyt vuorot" class="slot-list"></div>
         </div>
 
         <div class="card-footer">
           <span>Näkyvissä: <span class="stat-value" id="stat-visible">0</span></span>
           <span>Jonossa: <span class="stat-value" id="stat-queued">0</span></span>
           <span>Lisätty: <span class="stat-value" id="stat-added">0</span></span>
-          <span>Poistettu: <span class="stat-value" id="stat-removed">0</span></span>
-          <span>Tulossa: <span class="stat-value" id="stat-remaining">0</span></span>
+          <span>Hyväksytty: <span class="stat-value" id="stat-accepted">0</span></span>
+          <span>Hylätty: <span class="stat-value" id="stat-rejected">0</span></span>
+          <span>Poistui listasta: <span class="stat-value" id="stat-removed">0</span></span>
           <span>Klikkauksia: <span class="stat-value" id="stat-clicks">0</span></span>
         </div>
       </div>
     </div>
 
     <script>
-      const INITIAL_SLOTS = [
+      const INITIAL_NEW_SLOTS = [
         { date: "26.5.2026", weekday: "(01) Maanantai", shift: "06.00 - 14.00" },
-        { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "08.00 - 16.00" },
+        { date: "27.5.2026", weekday: "(02) Tiistai", shift: "08.00 - 16.00" },
         { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "14.00 - 22.00" },
-        { date: "29.5.2026", weekday: "(04) Torstai",   shift: "08.00 - 16.00" },
+        { date: "29.5.2026", weekday: "(04) Torstai", shift: "08.00 - 16.00" },
         { date: "30.5.2026", weekday: "(05) Perjantai", shift: "06.00 - 14.00" },
       ];
 
       const UPCOMING_SLOTS = [
         { date: "26.5.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
-        { date: "27.5.2026", weekday: "(02) Tiistai",   shift: "16.00 - 00.00" },
+        { date: "27.5.2026", weekday: "(02) Tiistai", shift: "16.00 - 00.00" },
         { date: "28.5.2026", weekday: "(03) Keskiviikko", shift: "06.00 - 14.00" },
-        { date: "29.5.2026", weekday: "(04) Torstai",   shift: "16.00 - 00.00" },
+        { date: "29.5.2026", weekday: "(04) Torstai", shift: "16.00 - 00.00" },
         { date: "30.5.2026", weekday: "(05) Perjantai", shift: "14.00 - 22.00" },
-        { date: "31.5.2026", weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
-        { date: "1.6.2026",  weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
-        { date: "2.6.2026",  weekday: "(01) Maanantai", shift: "06.00 - 14.00" },
-        { date: "3.6.2026",  weekday: "(02) Tiistai",   shift: "08.00 - 16.00" },
-        { date: "4.6.2026",  weekday: "(03) Keskiviikko", shift: "14.00 - 22.00" },
-        { date: "5.6.2026",  weekday: "(04) Torstai",   shift: "06.00 - 14.00" },
-        { date: "6.6.2026",  weekday: "(05) Perjantai", shift: "08.00 - 16.00" },
-        { date: "7.6.2026",  weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
-        { date: "8.6.2026",  weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
-        { date: "9.6.2026",  weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
-        { date: "10.6.2026", weekday: "(02) Tiistai",   shift: "06.00 - 14.00" },
+        { date: "31.5.2026", weekday: "(06) Lauantai", shift: "09.00 - 17.00" },
+        { date: "1.6.2026", weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
+        { date: "2.6.2026", weekday: "(01) Maanantai", shift: "06.00 - 14.00" },
+        { date: "3.6.2026", weekday: "(02) Tiistai", shift: "08.00 - 16.00" },
+        { date: "4.6.2026", weekday: "(03) Keskiviikko", shift: "14.00 - 22.00" },
+        { date: "5.6.2026", weekday: "(04) Torstai", shift: "06.00 - 14.00" },
+        { date: "6.6.2026", weekday: "(05) Perjantai", shift: "08.00 - 16.00" },
+        { date: "7.6.2026", weekday: "(06) Lauantai", shift: "09.00 - 17.00" },
+        { date: "8.6.2026", weekday: "(07) Sunnuntai", shift: "10.00 - 18.00" },
+        { date: "9.6.2026", weekday: "(01) Maanantai", shift: "14.00 - 22.00" },
+        { date: "10.6.2026", weekday: "(02) Tiistai", shift: "06.00 - 14.00" },
         { date: "11.6.2026", weekday: "(03) Keskiviikko", shift: "08.00 - 16.00" },
-        { date: "12.6.2026", weekday: "(04) Torstai",   shift: "06.00 - 14.00" },
+        { date: "12.6.2026", weekday: "(04) Torstai", shift: "06.00 - 14.00" },
         { date: "13.6.2026", weekday: "(05) Perjantai", shift: "08.00 - 16.00" },
-        { date: "14.6.2026", weekday: "(06) Lauantai",  shift: "09.00 - 17.00" },
+        { date: "14.6.2026", weekday: "(06) Lauantai", shift: "09.00 - 17.00" },
       ];
 
-      // 1 in 4 ticks produces a new slot
-      const ARRIVAL_PATTERN = [true, false, false, false];
-      // 1 in 3 refreshes removes a slot
-      const REMOVAL_PATTERN = [false, false, true];
+      const REFRESH_PATTERN = [
+        { addQueued: true, removeSystem: false },
+        { addQueued: false, removeSystem: false },
+        { addQueued: false, removeSystem: true },
+        { addQueued: false, removeSystem: false },
+      ];
 
+      const QUEUE_INTERVAL_MS = 12000;
       const FLASH_MS = 600;
 
-      const visibleSlots = INITIAL_SLOTS.map((s) => ({ ...s }));
-      const pendingSlots = [];
-      let arrivalIndex = 0;
-      let removalIndex = 0;
-      let clickCount = 0;
-      let addedCount = 0;
-      let removedCount = 0;
+      let slotIdCounter = 0;
+      let queueTimer = null;
+      const makeSlot = (slot) => ({ ...slot, id: `slot-${++slotIdCounter}` });
 
-      function renderSlots() {
-        const list = document.querySelector('[role="list"]');
-        if (visibleSlots.length === 0) {
-          list.innerHTML = '<div class="empty-state">Ei saatavilla olevia vuoroja.</div>';
-          return;
-        }
-        list.innerHTML = visibleSlots
-          .map((s) => {
-            const cls = s.isNew ? "slot-item slot-item--added"
-              : s.isRemoving ? "slot-item slot-item--removing"
-              : "slot-item";
-            return `<div role="listitem" class="${cls}">
-              <span class="slot-date">${s.date}</span>
-              <span class="slot-weekday">${s.weekday}</span>
-              <span class="slot-time">${s.shift}</span>
-            </div>`;
-          })
-          .join("");
+      const state = {
+        newSlots: INITIAL_NEW_SLOTS.map(makeSlot),
+        acceptedSlots: [],
+        rejectedSlots: [],
+        queuedSlots: [],
+        upcomingSlots: UPCOMING_SLOTS.map(makeSlot),
+        clickCount: 0,
+        addedCount: 0,
+        removedCount: 0,
+        refreshTick: 0,
+        activeTab: "new",
+      };
+
+      const tabs = Array.from(document.querySelectorAll(".tab-button"));
+      const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+      const refreshBtn = document.querySelector(".refresh-btn");
+      const newSlotList = document.getElementById("new-slot-list");
+      const acceptedSlotList = document.getElementById("accepted-slot-list");
+      const rejectedSlotList = document.getElementById("rejected-slot-list");
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
       }
 
-      function updateStatus() {
-        const queued = pendingSlots.length;
-        document.getElementById("stat-visible").textContent = visibleSlots.length;
+      function findSlotById(list, id) {
+        return list.find((slot) => slot.id === id) || null;
+      }
+
+      function setActiveTab(tab) {
+        state.activeTab = tab;
+        render();
+      }
+
+      function syncTabVisibility() {
+        for (const button of tabs) {
+          const isActive = button.dataset.tab === state.activeTab;
+          button.setAttribute("aria-selected", String(isActive));
+          button.tabIndex = isActive ? 0 : -1;
+        }
+
+        for (const panel of panels) {
+          panel.hidden = panel.dataset.tabPanel !== state.activeTab;
+        }
+      }
+
+      function renderTabCounts() {
+        document.getElementById("count-new").textContent = String(state.newSlots.length);
+        document.getElementById("count-accepted").textContent = String(state.acceptedSlots.length);
+        document.getElementById("count-rejected").textContent = String(state.rejectedSlots.length);
+      }
+
+      function renderFooter() {
+        document.getElementById("stat-visible").textContent = String(state.newSlots.length);
         const queuedEl = document.getElementById("stat-queued");
-        queuedEl.textContent = queued;
-        queuedEl.toggleAttribute("data-highlight", queued > 0);
-        document.getElementById("stat-added").textContent = addedCount;
-        document.getElementById("stat-removed").textContent = removedCount;
-        document.getElementById("stat-remaining").textContent = UPCOMING_SLOTS.length;
-        document.getElementById("stat-clicks").textContent = clickCount;
+        queuedEl.textContent = String(state.queuedSlots.length);
+        queuedEl.toggleAttribute("data-highlight", state.queuedSlots.length > 0);
+        document.getElementById("stat-added").textContent = String(state.addedCount);
+        document.getElementById("stat-accepted").textContent = String(state.acceptedSlots.length);
+        document.getElementById("stat-rejected").textContent = String(state.rejectedSlots.length);
+        document.getElementById("stat-removed").textContent = String(state.removedCount);
+        document.getElementById("stat-clicks").textContent = String(state.clickCount);
+      }
+
+      function slotRowClass(slot, variant) {
+        const classes = ["slot-item"];
+        if (variant !== "new") {
+          classes.push("slot-item--history");
+        }
+        if (variant === "new" && slot.flash === "added") {
+          classes.push("slot-item--added");
+        }
+        if (variant === "new" && slot.transitioning) {
+          classes.push("slot-item--removing");
+        }
+        if (variant === "accepted") {
+          classes.push("slot-item--accepted-history");
+        }
+        if (variant === "rejected") {
+          classes.push("slot-item--rejected-history");
+        }
+        return classes.join(" ");
+      }
+
+      function slotRowHtml(slot, variant) {
+        const actions = variant === "new"
+          ? `<span class="slot-actions" aria-label="Vuoron toiminnot">
+              <button
+                type="button"
+                class="slot-action slot-action--accept"
+                data-action="accept"
+                ${slot.transitioning ? "disabled" : ""}
+              >Hyväksy</button>
+              <button
+                type="button"
+                class="slot-action slot-action--reject"
+                data-action="reject"
+                ${slot.transitioning ? "disabled" : ""}
+              >Hylkää</button>
+            </span>`
+          : "";
+
+        return `<div role="listitem" class="${slotRowClass(slot, variant)}" data-slot-id="${escapeHtml(slot.id)}">
+          <span class="slot-date">${escapeHtml(slot.date)}</span>
+          <span class="slot-weekday">${escapeHtml(slot.weekday)}</span>
+          <span class="slot-time">${escapeHtml(slot.shift)}</span>
+          ${actions}
+        </div>`;
+      }
+
+      function renderList(element, slots, variant, emptyMessage) {
+        if (slots.length === 0) {
+          element.innerHTML = `<div class="empty-state">${escapeHtml(emptyMessage)}</div>`;
+          return;
+        }
+
+        element.innerHTML = slots.map((slot) => slotRowHtml(slot, variant)).join("");
+      }
+
+      function render() {
+        syncTabVisibility();
+        renderTabCounts();
+        renderFooter();
+        renderList(newSlotList, state.newSlots, "new", "Ei uusia vuoroja juuri nyt.");
+        renderList(acceptedSlotList, state.acceptedSlots, "accepted", "Hyväksyttyjä vuoroja ei vielä ole.");
+        renderList(rejectedSlotList, state.rejectedSlots, "rejected", "Hylättyjä vuoroja ei vielä ole.");
       }
 
       function queueIncomingSlot() {
-        if (!ARRIVAL_PATTERN[arrivalIndex % ARRIVAL_PATTERN.length]) {
-          arrivalIndex++;
+        const next = state.upcomingSlots.shift();
+        if (!next) {
+          if (queueTimer) {
+            window.clearInterval(queueTimer);
+            queueTimer = null;
+          }
           return;
         }
-        arrivalIndex++;
-        const next = UPCOMING_SLOTS.shift();
-        if (!next) { clearInterval(arrivalTimer); return; }
-        pendingSlots.push({ ...next, isNew: true });
-        updateStatus();
+
+        state.queuedSlots.push(next);
+        renderFooter();
+      }
+
+      function flushQueuedSlots() {
+        if (state.queuedSlots.length === 0) {
+          return;
+        }
+
+        const queued = state.queuedSlots.splice(0);
+        state.addedCount += queued.length;
+
+        for (const slot of queued) {
+          slot.flash = "added";
+        }
+
+        state.newSlots.unshift(...queued);
+
+        for (const slot of queued) {
+          window.setTimeout(() => {
+            const current = findSlotById(state.newSlots, slot.id);
+            if (!current) {
+              return;
+            }
+            delete current.flash;
+            render();
+          }, FLASH_MS);
+        }
+      }
+
+      function removeSystemSlot() {
+        const target = [...state.newSlots].reverse().find((slot) => !slot.transitioning);
+        if (!target) {
+          return;
+        }
+
+        target.transitioning = "system";
+        render();
+
+        window.setTimeout(() => {
+          const index = state.newSlots.findIndex((slot) => slot.id === target.id);
+          if (index === -1) {
+            return;
+          }
+          state.newSlots.splice(index, 1);
+          state.removedCount += 1;
+          render();
+        }, FLASH_MS);
+      }
+
+      function moveSlotToHistory(slot, targetList, historyKind) {
+        if (slot.transitioning) {
+          return;
+        }
+
+        slot.transitioning = historyKind;
+        render();
+
+        window.setTimeout(() => {
+          const index = state.newSlots.findIndex((entry) => entry.id === slot.id);
+          if (index === -1) {
+            return;
+          }
+
+          const [removed] = state.newSlots.splice(index, 1);
+          targetList.unshift({
+            ...removed,
+            historyKind,
+          });
+          render();
+        }, FLASH_MS);
+      }
+
+      function handleNewListClick(event) {
+        const button = event.target.closest(".slot-action");
+        if (!button) {
+          return;
+        }
+
+        const row = button.closest("[data-slot-id]");
+        if (!row) {
+          return;
+        }
+
+        const slot = findSlotById(state.newSlots, row.dataset.slotId);
+        if (!slot) {
+          return;
+        }
+
+        const action = button.dataset.action;
+        if (action === "accept") {
+          moveSlotToHistory(slot, state.acceptedSlots, "accepted");
+        } else if (action === "reject") {
+          moveSlotToHistory(slot, state.rejectedSlots, "rejected");
+        }
       }
 
       function handleRefresh() {
-        clickCount++;
+        state.clickCount += 1;
 
-        if (pendingSlots.length > 0) {
-          addedCount += pendingSlots.length;
-          visibleSlots.unshift(...pendingSlots.splice(0));
+        const cycle = REFRESH_PATTERN[state.refreshTick % REFRESH_PATTERN.length];
+        state.refreshTick += 1;
+
+        if (cycle.addQueued) {
+          flushQueuedSlots();
         }
 
-        if (REMOVAL_PATTERN[removalIndex % REMOVAL_PATTERN.length]) {
-          const target = visibleSlots.filter((s) => !s.isNew && !s.isRemoving).at(-1);
-          if (target) {
-            target.isRemoving = true;
-            removedCount++;
-            setTimeout(() => {
-              visibleSlots.splice(visibleSlots.indexOf(target), 1);
-              renderSlots();
-              updateStatus();
-            }, FLASH_MS);
-          }
+        if (cycle.removeSystem) {
+          removeSystemSlot();
         }
-        removalIndex++;
 
-        renderSlots();
-        visibleSlots.forEach((s) => { s.isNew = false; });
-        updateStatus();
+        render();
       }
 
-      const refreshBtn = document.querySelector(".refresh-btn");
+      function handleTabKeydown(event) {
+        const currentIndex = tabs.findIndex((button) => button.dataset.tab === state.activeTab);
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+          return;
+        }
+
+        event.preventDefault();
+        const delta = event.key === "ArrowRight" ? 1 : -1;
+        const nextIndex = (currentIndex + delta + tabs.length) % tabs.length;
+        tabs[nextIndex].focus();
+        setActiveTab(tabs[nextIndex].dataset.tab);
+      }
+
+      for (const button of tabs) {
+        button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+        button.addEventListener("keydown", handleTabKeydown);
+      }
+
       refreshBtn.addEventListener("click", handleRefresh);
-      refreshBtn.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleRefresh(); }
-      });
+      newSlotList.addEventListener("click", handleNewListClick);
 
-      const arrivalTimer = window.setInterval(queueIncomingSlot, 12000);
-
-      renderSlots();
-      updateStatus();
+      queueTimer = window.setInterval(queueIncomingSlot, QUEUE_INTERVAL_MS);
+      render();
     </script>
   </body>
 </html>

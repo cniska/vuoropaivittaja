@@ -171,7 +171,7 @@
   function mergeSlotHistory(existing, newLines, cap = SLOT_HISTORY_CAP) {
     const base = Array.isArray(existing) ? existing : [];
     // Empty snapshot is treated as "unknown state" (e.g. page still loading),
-    // so we skip removedAt stamping to avoid false booked-slot detections.
+    // so we skip removedAt stamping to avoid false disappearance detections.
     if (!Array.isArray(newLines) || newLines.length === 0) return base;
 
     const now = new Date().toISOString();
@@ -242,7 +242,7 @@
     historyTotal: (n) => `Yhteensä <strong>${n}</strong> vuoroa`,
     historyLastSeen: (ts) => `Viimeksi nähty ${ts}`,
     historyFirstSeen: (ts) => `Ilmestyi ${ts}`,
-    historyBooked: (ts) => `Varattu ${ts}`,
+    historyRemoved: (ts) => `Poistui ${ts}`,
 
     // In-page picker & click results
     pickerHint: "Klikkaa haluamaasi painiketta tai paina Esc peruuttaaksesi.",

@@ -321,9 +321,9 @@ historyList.addEventListener("click", async (e) => {
 
 function setHistoryEntries(entries) {
   historyEntries = entries.slice().sort((a, b) => {
-    const aBooked = Boolean(a.removedAt);
-    const bBooked = Boolean(b.removedAt);
-    if (aBooked !== bBooked) return aBooked ? 1 : -1;
+    const aRemoved = Boolean(a.removedAt);
+    const bRemoved = Boolean(b.removedAt);
+    if (aRemoved !== bRemoved) return aRemoved ? 1 : -1;
     const dateA = parseSlotDate(a.text);
     const dateB = parseSlotDate(b.text);
     if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
@@ -350,14 +350,14 @@ function renderHistory() {
 
   const items = visible
     .map((entry) => {
-      const isBooked = Boolean(entry.removedAt);
-      const line2 = isBooked
-        ? STRINGS.historyBooked(formatTimestamp(entry.removedAt))
+      const isRemoved = Boolean(entry.removedAt);
+      const line2 = isRemoved
+        ? STRINGS.historyRemoved(formatTimestamp(entry.removedAt))
         : STRINGS.historyLastSeen(formatTimestamp(entry.lastSeen));
-      const deleteBtn = isBooked
+      const deleteBtn = isRemoved
         ? `<button type="button" class="history-item-delete" data-text="${escapeHtml(entry.text)}" aria-label="Poista: ${escapeHtml(abbreviateDow(entry.text))}">&times;</button>`
         : "";
-      return `<div role="listitem" class="history-item${isBooked ? " history-item--booked" : ""}">
+      return `<div role="listitem" class="history-item${isRemoved ? " history-item--removed" : ""}">
         <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
         <span class="history-item-meta">${STRINGS.historyFirstSeen(formatTimestamp(entry.firstSeen))}</span>
         <span class="history-item-meta">${line2}</span>${deleteBtn}

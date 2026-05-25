@@ -349,7 +349,7 @@ button:disabled { cursor: default; opacity: 0.45; }
   color: var(--muted);
 }
 
-.history-item--booked {
+.history-item--removed {
   opacity: 0.45;
 }
 
@@ -368,7 +368,7 @@ button:disabled { cursor: default; opacity: 0.45; }
   opacity: 0;
   transition: opacity 0.1s, color 0.1s;
 }
-.history-item--booked:hover .history-item-delete,
+.history-item--removed:hover .history-item-delete,
 .history-item-delete:focus-visible { opacity: 1; }
 .history-item-delete:hover { color: var(--error); background: transparent; }
 
