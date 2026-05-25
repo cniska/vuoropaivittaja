@@ -14,7 +14,6 @@ const DRAFT_KEY = "draftRule";
 const SLOT_HISTORY_KEY = "slotHistory";
 const MIN_INTERVAL_S = 5;
 const STATUS_DISMISS_MS = 5000;
-const HISTORY_PAGE_SIZE = 20;
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -32,7 +31,6 @@ const logger = createLogger("popup", false);
 let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
-let historyVisible = 20;
 let historyEntries = [];
 
 void initialize();
@@ -333,22 +331,16 @@ function setHistoryEntries(entries) {
 }
 
 function resetHistoryEntries(entries = []) {
-  historyVisible = HISTORY_PAGE_SIZE;
   setHistoryEntries(entries);
 }
 
 function renderHistory() {
-  const total = historyEntries.length;
-
-  if (total === 0) {
+  if (historyEntries.length === 0) {
     historyList.innerHTML = `<p class="history-empty">${STRINGS.historyEmpty}</p>`;
     return;
   }
 
-  const visible = historyEntries.slice(0, historyVisible);
-  const hasMore = historyVisible < total;
-
-  const items = visible
+  const items = historyEntries
     .map((entry) => {
       const isRemoved = Boolean(entry.removedAt);
       const line2 = isRemoved
@@ -365,20 +357,7 @@ function renderHistory() {
     })
     .join("");
 
-  const loadMore = hasMore
-    ? `<button type="button" class="history-load-more" id="history-load-more">${STRINGS.historyLoadMore(total - historyVisible)}</button>`
-    : `<p class="history-total">${STRINGS.historyTotal(total)}</p>`;
-
-  historyList.innerHTML = items + loadMore;
-
-  if (hasMore) {
-    document
-      .getElementById("history-load-more")
-      .addEventListener("click", () => {
-        historyVisible += HISTORY_PAGE_SIZE;
-        renderHistory();
-      });
-  }
+  historyList.innerHTML = items;
 }
 
 function formatTimestamp(iso) {

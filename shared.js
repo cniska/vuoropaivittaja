@@ -238,8 +238,6 @@
 
     // History panel
     historyEmpty: "Ei tallennettuja vuoroja.",
-    historyLoadMore: (n) => `Lataa lisää (${n})`,
-    historyTotal: (n) => `Yhteensä <strong>${n}</strong> vuoroa`,
     historyLastSeen: (ts) => `Viimeksi nähty ${ts}`,
     historyFirstSeen: (ts) => `Ilmestyi ${ts}`,
     historyRemoved: (ts) => `Poistui ${ts}`,

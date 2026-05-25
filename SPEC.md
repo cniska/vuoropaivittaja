@@ -112,9 +112,8 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 - Each row shows the slot text, a first-seen timestamp, and either a last-seen timestamp or a removed-at timestamp, all formatted in Finnish locale.
 - Removed slots (with `removedAt`) are rendered at reduced opacity.
 - Removed slots show a hover-revealed delete button (×) to remove that individual entry from the domain's history.
-- The first 20 entries are shown initially; a load-more button shows 20 more at a time without resetting position on live updates.
 - A clear button appears above the list; clicking it clears only the current domain's entries after confirmation.
-- The column is accessible with keyboard: load-more, clear, and delete buttons are focusable and operable without a mouse.
+- The column is accessible with keyboard: clear and delete buttons are focusable and operable without a mouse.
 
 ## Monitoring requirements
 
