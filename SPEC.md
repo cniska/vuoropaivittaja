@@ -107,7 +107,7 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 ### Slot history column
 
 - Shows all recorded slot entries for the current domain.
-- Active slots (no `removedAt`) are sorted before removed slots; within each group, sorted date ascending; ties broken by `lastSeen` ascending.
+- Entries are sorted by most recently added first; slot date is used as a secondary chronological tie-breaker; ties after that are broken by `lastSeen` ascending.
 - Weekday names are abbreviated to 2 letters at display time (e.g. "Lauantai" → "La").
 - Each row shows the slot text, a first-seen timestamp, and either a last-seen timestamp or a removed-at timestamp, all formatted in Finnish locale.
 - Removed slots (with `removedAt`) are rendered at reduced opacity.

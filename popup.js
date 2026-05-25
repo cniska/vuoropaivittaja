@@ -32,6 +32,7 @@ let activeTab = null;
 let pickedFrameId = null;
 let statusTimer = null;
 let historyEntries = [];
+const historyFlashKeys = new Set();
 
 void initialize();
 
@@ -318,15 +319,27 @@ historyList.addEventListener("click", async (e) => {
 });
 
 function setHistoryEntries(entries) {
+  const previousKeys = new Set(historyEntries.map(historyEntryKey));
   historyEntries = entries.slice().sort((a, b) => {
-    const aRemoved = Boolean(a.removedAt);
-    const bRemoved = Boolean(b.removedAt);
-    if (aRemoved !== bRemoved) return aRemoved ? 1 : -1;
+    if (a.firstSeen !== b.firstSeen) {
+      return b.firstSeen.localeCompare(a.firstSeen);
+    }
     const dateA = parseSlotDate(a.text);
     const dateB = parseSlotDate(b.text);
     if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
     return a.lastSeen.localeCompare(b.lastSeen);
   });
+  const nextKeys = new Set(historyEntries.map(historyEntryKey));
+  for (const entry of historyEntries) {
+    const key = historyEntryKey(entry);
+    if (!previousKeys.has(key) && nextKeys.has(key)) {
+      historyFlashKeys.add(key);
+      window.setTimeout(() => {
+        historyFlashKeys.delete(key);
+        renderHistory();
+      }, 1200);
+    }
+  }
   renderHistory();
 }
 
@@ -342,6 +355,7 @@ function renderHistory() {
 
   const items = historyEntries
     .map((entry) => {
+      const key = historyEntryKey(entry);
       const isRemoved = Boolean(entry.removedAt);
       const line2 = isRemoved
         ? STRINGS.historyRemoved(formatTimestamp(entry.removedAt))
@@ -349,7 +363,7 @@ function renderHistory() {
       const deleteBtn = isRemoved
         ? `<button type="button" class="history-item-delete" data-text="${escapeHtml(entry.text)}" aria-label="Poista: ${escapeHtml(abbreviateDow(entry.text))}">&times;</button>`
         : "";
-      return `<div role="listitem" class="history-item${isRemoved ? " history-item--removed" : ""}">
+      return `<div role="listitem" class="history-item${isRemoved ? " history-item--removed" : ""}${historyFlashKeys.has(key) ? " history-item--flash" : ""}">
         <span class="history-item-text">${escapeHtml(abbreviateDow(entry.text))}</span>
         <span class="history-item-meta">${STRINGS.historyFirstSeen(formatTimestamp(entry.firstSeen))}</span>
         <span class="history-item-meta">${line2}</span>${deleteBtn}
@@ -378,6 +392,10 @@ function domainHistory(all) {
   if (!urlPattern) return [];
   const map = normalizeSlotHistoryMap(all);
   return Array.isArray(map[urlPattern]) ? map[urlPattern] : [];
+}
+
+function historyEntryKey(entry) {
+  return `${String(entry.firstSeen || "")}::${String(entry.text || "")}`;
 }
 
 function abbreviateDow(text) {
