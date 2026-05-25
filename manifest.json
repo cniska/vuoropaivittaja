@@ -18,7 +18,7 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "content_scripts": [
     {
@@ -27,9 +27,9 @@
       ],
       "all_frames": true,
       "js": [
-        "shared.js",
-        "content-helpers.js",
-        "content.js"
+        "src/shared.js",
+        "src/content-helpers.js",
+        "src/content.js"
       ],
       "run_at": "document_idle"
     }

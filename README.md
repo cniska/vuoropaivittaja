@@ -18,11 +18,12 @@ Chrome extension for monitoring appointment slot lists and alerting when the vis
 
 ## Repository layout
 
-- `background.js` - background worker for alerts, storage updates, and offscreen audio
-- `content.js` - monitoring logic that runs in the page
-- `content-helpers.js` - pure helpers used by the content script and tests
-- `popup.html`, `popup.js`, `popup.css` - extension popup UI
-- `shared.js` - shared state and helpers exposed to both browser scripts and tests
+- `src/background.js` - background worker for alerts, storage updates, and offscreen audio
+- `src/content.js` - monitoring logic that runs in the page
+- `src/content-helpers.js` - pure helpers used by the content script and tests
+- `src/*.test.js` - colocated unit tests for the runtime modules
+- `popup.html`, `src/popup.js`, `popup.css` - extension popup UI
+- `src/shared.js` - shared state and helpers exposed to both browser scripts and tests
 - `test-page/` - local test page for manual verification
 - `SPEC.md` - product and implementation contract
 
@@ -76,5 +77,3 @@ See [ASENNUS.md](./ASENNUS.md) for the end-user installation steps in Finnish.
 - Prefer small, testable helpers over browser-specific logic.
 
 ## Releasing
-
-- Use [.agents/skills/release/SKILL.md](./.agents/skills/release/SKILL.md) for the release workflow.

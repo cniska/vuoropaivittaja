@@ -17,7 +17,7 @@
 - All user-facing strings must be in Finnish.
 - No build step — plain ES2020+ scripts loaded directly by Chrome.
 - Tests use `node --test` (built-in). Run with `pnpm test`.
-- `shared.js` exports to both `globalThis.VuoropaivittajaShared` and `module.exports`.
+- `src/shared.js` exports to both `globalThis.VuoropaivittajaShared` and `module.exports`.
 - Keep `SPEC.md` current with behavior changes in the same slice when practical.
 
 ## Releasing
