@@ -1,24 +1,76 @@
 # Vuoropäivittäjä
 
-Chrome-laajennus, joka tarkkailee varattavia lääkärivuoroja automaattisesti. Se klikkaa määritettyä päivityspainiketta satunnaisin väliajoin, ja ilmoittaa äänellä tai työpöytäilmoituksella, jos sivun sisältö muuttuu.
+Chrome extension for monitoring appointment slot lists and alerting when the visible list changes.
 
-## Asennus
+## What it does
 
-1. Avaa `chrome://extensions`
-2. Ota käyttöön **Kehittäjätila**
-3. Klikkaa **Lataa pakkaamaton**
-4. Valitse tämä kansio
+- Watches one active tab at a time.
+- Clicks a configured refresh control on a random interval.
+- Compares the visible slot list before and after refresh.
+- Notifies the user with a desktop notification and optional sound.
+- Stores slot history locally in `chrome.storage.local`.
 
-## Käyttö
+## Requirements
 
-1. Avaa seurattava sivu Chromessa
-2. Klikkaa laajennuksen kuvaketta
-3. Aseta nykyinen sivu painikkeella **Aseta nykyinen sivu**
-4. Valitse päivityspainike painikkeella **Valitse sivulta** tai kirjoita valitsin käsin
-5. Tallenna asetukset ja kytke **Tarkkailu päällä**
+- Chrome 120 or newer
+- `pnpm`
+- No build step is required; the extension loads plain ES2020+ scripts directly
 
-## Testit
+## Repository layout
+
+- `background.js` - background worker for alerts, storage updates, and offscreen audio
+- `content.js` - monitoring logic that runs in the page
+- `content-helpers.js` - pure helpers used by the content script and tests
+- `popup.html`, `popup.js`, `popup.css` - extension popup UI
+- `shared.js` - shared state and helpers exposed to both browser scripts and tests
+- `test-page/` - local test page for manual verification
+- `SPEC.md` - product and implementation contract
+
+## Development
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
+Run the test suite:
 
 ```bash
 pnpm test
 ```
+
+Run static checks:
+
+```bash
+pnpm check
+```
+
+Lint only:
+
+```bash
+pnpm lint
+```
+
+Format the repository:
+
+```bash
+pnpm format
+```
+
+Serve the local test page:
+
+```bash
+pnpm serve
+```
+
+## Loading the extension locally
+
+See [ASENNUS.md](./ASENNUS.md) for the end-user installation steps in Finnish.
+
+## Notes for contributors
+
+- All user-facing UI text must remain in Finnish.
+- Developer-facing code, logs, and identifiers should remain in English.
+- Keep `SPEC.md` updated when behavior changes.
+- Prefer small, testable helpers over browser-specific logic.
