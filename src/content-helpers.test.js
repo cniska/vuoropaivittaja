@@ -10,6 +10,7 @@ const {
   hasNewSlotLines,
   hasNewSlotLinesAcrossSnapshots,
   summarizeObservedSlotSnapshots,
+  simulatePostRefreshObservation,
   shouldNotifyForRefresh,
 } = require("./content-helpers.js");
 
@@ -177,6 +178,42 @@ test("summarizeObservedSlotSnapshots resolves a slow-rendering refresh", () => {
     ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
   ]);
   assert.equal(summary.stabilized, true);
+});
+
+test("simulatePostRefreshObservation alerts on the first poll that reveals a new slot", () => {
+  const beforeSlots = [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Tiistai 2.6.2026 08:00–16:00",
+  ];
+  const observedSlotSnapshots = [
+    ["Maanantai 1.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+  ];
+
+  const result = simulatePostRefreshObservation(
+    beforeSlots,
+    observedSlotSnapshots
+  );
+
+  assert.equal(result.alerted, true);
+  assert.equal(result.alertAtIndex, 1);
+  assert.deepEqual(result.alertedNewSlotLines, [
+    "Keskiviikko 3.6.2026 08:00–16:00",
+  ]);
+  assert.deepEqual(result.allNewSlotLines, [
+    "Keskiviikko 3.6.2026 08:00–16:00",
+  ]);
+  assert.deepEqual(result.afterSlots, [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Keskiviikko 3.6.2026 08:00–16:00",
+  ]);
+  assert.deepEqual(result.slotSnapshots, [
+    ["Maanantai 1.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+  ]);
+  assert.equal(result.stabilized, true);
 });
 
 test("shouldNotifyForRefresh ignores removals and reordering when a list selector exists", () => {

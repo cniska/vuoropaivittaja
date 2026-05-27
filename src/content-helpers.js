@@ -137,6 +137,68 @@
     };
   }
 
+  function simulatePostRefreshObservation(
+    before,
+    snapshots,
+    stableReadsRequired = 2
+  ) {
+    const normalizedSnapshots = Array.isArray(snapshots)
+      ? snapshots.map((snapshot) => normalizeSlotLines(snapshot))
+      : [];
+    const slotSnapshots = [];
+    const seenNewLines = new Set();
+    let alertAtIndex = -1;
+    let alertedNewSlotLines = [];
+    let afterSlots = [];
+    let stableCount = 0;
+    let previousSnapshot = null;
+
+    for (let index = 0; index < normalizedSnapshots.length; index += 1) {
+      const snapshot = normalizedSnapshots[index];
+
+      if (snapshot.length > 0) {
+        slotSnapshots.push(snapshot);
+        afterSlots = snapshot;
+      }
+
+      const newSlotLines = findNewSlotLines(before, snapshot);
+      if (alertAtIndex === -1 && newSlotLines.length > 0) {
+        alertAtIndex = index;
+        alertedNewSlotLines = newSlotLines;
+      }
+
+      for (const line of newSlotLines) {
+        seenNewLines.add(line);
+      }
+
+      if (
+        previousSnapshot &&
+        snapshot.length > 0 &&
+        snapshotsAreEqual(previousSnapshot, snapshot)
+      ) {
+        stableCount += 1;
+      } else {
+        stableCount = 1;
+      }
+
+      previousSnapshot = snapshot;
+    }
+
+    return {
+      alertAtIndex,
+      alerted: alertAtIndex !== -1,
+      alertedNewSlotLines,
+      afterSlots,
+      allNewSlotLines: Array.from(seenNewLines),
+      slotSnapshots,
+      stableCount,
+      stabilized:
+        previousSnapshot !== null &&
+        previousSnapshot.length > 0 &&
+        stableCount >= stableReadsRequired,
+    };
+  }
+
   function shouldNotifyForRefresh(
     beforeSnapshot,
     afterSnapshot,
@@ -158,6 +220,7 @@
     hasNewSlotLines,
     hasNewSlotLinesAcrossSnapshots,
     summarizeObservedSlotSnapshots,
+    simulatePostRefreshObservation,
     shouldNotifyForRefresh,
   };
 
