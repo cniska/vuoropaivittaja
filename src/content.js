@@ -20,8 +20,11 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     summarizeObservedSlotSnapshots,
   } = globalThis.VuoropaivittajaContentHelpers;
 
-  const POST_REFRESH_POLL_INTERVAL_MS = 500;
-  const POST_REFRESH_TIMEOUT_MS = 5000;
+  const POST_REFRESH_OBSERVATION = {
+    pollIntervalMs: 500,
+    timeoutMs: 5000,
+    nonListDelayMs: 1500,
+  };
 
   let lastUrl = location.href;
   let pickerState = null;
@@ -349,7 +352,7 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     onNewSlotLines
   ) {
     if (!listSelector) {
-      await delay(1500);
+      await delay(POST_REFRESH_OBSERVATION.nonListDelayMs);
       return {
         after: takeSnapshot(listSelector),
         afterSlots: [],
@@ -360,13 +363,13 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     }
 
     const observedSlotSnapshots = [];
-    const timeoutAt = Date.now() + POST_REFRESH_TIMEOUT_MS;
+    const timeoutAt = Date.now() + POST_REFRESH_OBSERVATION.timeoutMs;
     let after = takeSnapshot(listSelector);
     let afterSlots = listSelector ? snapshotListItems(listSelector) : [];
     let alerted = false;
 
     while (Date.now() < timeoutAt && monitoringSession === session) {
-      await delay(POST_REFRESH_POLL_INTERVAL_MS);
+      await delay(POST_REFRESH_OBSERVATION.pollIntervalMs);
       if (monitoringSession !== session) {
         break;
       }

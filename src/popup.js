@@ -16,6 +16,7 @@ const DRAFT_KEY = "draftRule";
 const SLOT_HISTORY_KEY = "slotHistory";
 const MIN_INTERVAL_S = 5;
 const STATUS_DISMISS_MS = 5000;
+const DEFAULT_SELECTOR = "(//button[@aria-label='Päivitä luettelo'])[2]";
 
 const enabledInput = document.getElementById("enabled");
 const notificationsInput = document.getElementById("notifications");
@@ -128,7 +129,7 @@ async function autosaveSettings(successMessage = STRINGS.saved) {
 async function autosaveRule(showToast = true) {
   const nextRule = {
     urlPattern: urlPatternFromTab(),
-    selector: selectorInput.value.trim(),
+    selector: selectorInput.value.trim() || DEFAULT_SELECTOR,
     listSelector: "",
   };
 
@@ -212,7 +213,7 @@ function fillSettings(settings) {
 }
 
 function fillRule(rule) {
-  if (rule) selectorInput.value = rule.selector;
+  selectorInput.value = rule?.selector || DEFAULT_SELECTOR;
 }
 
 function syncDisabledState() {
@@ -251,7 +252,7 @@ function urlPatternFromTab() {
 
 async function saveDraft() {
   await chrome.storage.local.set({
-    [DRAFT_KEY]: { selector: selectorInput.value.trim() },
+    [DRAFT_KEY]: { selector: selectorInput.value.trim() || DEFAULT_SELECTOR },
   });
 }
 
@@ -260,7 +261,7 @@ async function loadDraft() {
   const draft = stored[DRAFT_KEY];
   if (!draft || typeof draft !== "object") return;
 
-  selectorInput.value = String(draft.selector ?? "");
+  selectorInput.value = String(draft.selector ?? "").trim() || DEFAULT_SELECTOR;
   await chrome.storage.local.remove(DRAFT_KEY);
 }
 
