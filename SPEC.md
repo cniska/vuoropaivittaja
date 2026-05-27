@@ -121,8 +121,8 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 - The content script must work in pages that use frames.
 - The refresh control can live inside a frame, and the chosen selector must still work when tested later.
 - The monitored snapshot should prefer the visible slot list when it exists, and fall back to page text when it does not.
-- The comparison should be based on the visible content before and after the refresh click.
-- When the refreshed snapshot contains new slot lines, the extension sends an alert request to the background worker.
+- The comparison should be based on the visible content before the refresh click and on one or more post-refresh snapshots until the list stabilizes or a timeout is reached.
+- When the first post-refresh snapshot reveals new slot lines, the extension sends an alert request to the background worker immediately.
 - When the snapshot changes, the content script parses the current slot list into individual lines and includes them in the alert message so the background worker can update the slot history.
 - A failed monitor cycle must not crash the content script or block later cycles.
 
@@ -179,7 +179,7 @@ Both columns are visible simultaneously. The popup width should expand to accomm
 - New slots are queued in the background and appear only when refresh is clicked.
 - Adding slots flashes the row green briefly; system-removed rows fade out in red before disappearing.
 - Some refresh cycles intentionally make no visible change so no-change behavior can be verified.
-- New slots appear first in the list.
+- New slots can appear at random positions in the list, matching the real booking system.
 - A stat footer shows visible count, queued count, total added, accepted count, rejected count, total removed, and total click count.
 
 ## Testability requirements

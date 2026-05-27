@@ -57,8 +57,84 @@
     });
   }
 
+  function findNewSlotLinesAcrossSnapshots(before, snapshots) {
+    const beforeSet = new Set(normalizeSlotLines(before));
+    const seen = new Set();
+    const result = [];
+
+    if (!Array.isArray(snapshots)) {
+      return result;
+    }
+
+    for (const snapshot of snapshots) {
+      for (const line of normalizeSlotLines(snapshot)) {
+        if (beforeSet.has(line) || seen.has(line)) {
+          continue;
+        }
+
+        seen.add(line);
+        result.push(line);
+      }
+    }
+
+    return result;
+  }
+
   function hasNewSlotLines(before, after) {
     return findNewSlotLines(before, after).length > 0;
+  }
+
+  function hasNewSlotLinesAcrossSnapshots(before, snapshots) {
+    return findNewSlotLinesAcrossSnapshots(before, snapshots).length > 0;
+  }
+
+  function summarizeObservedSlotSnapshots(
+    before,
+    snapshots,
+    stableReadsRequired = 2
+  ) {
+    const normalizedSnapshots = Array.isArray(snapshots)
+      ? snapshots.map((snapshot) => normalizeSlotLines(snapshot))
+      : [];
+    const nonEmptySnapshots = normalizedSnapshots.filter(
+      (snapshot) => snapshot.length > 0
+    );
+    const afterSlots =
+      nonEmptySnapshots.length > 0
+        ? nonEmptySnapshots[nonEmptySnapshots.length - 1]
+        : [];
+    const newSlotLines = findNewSlotLinesAcrossSnapshots(
+      before,
+      normalizedSnapshots
+    );
+
+    let stableCount = 0;
+    let previousSnapshot = null;
+
+    for (const snapshot of normalizedSnapshots) {
+      if (
+        previousSnapshot &&
+        snapshot.length > 0 &&
+        snapshotsAreEqual(previousSnapshot, snapshot)
+      ) {
+        stableCount += 1;
+      } else {
+        stableCount = 1;
+      }
+
+      previousSnapshot = snapshot;
+    }
+
+    return {
+      afterSlots,
+      newSlotLines,
+      slotSnapshots: nonEmptySnapshots,
+      stableCount,
+      stabilized:
+        previousSnapshot !== null &&
+        previousSnapshot.length > 0 &&
+        stableCount >= stableReadsRequired,
+    };
   }
 
   function shouldNotifyForRefresh(
@@ -78,7 +154,10 @@
     snapshotsAreEqual,
     parseSlotText,
     findNewSlotLines,
+    findNewSlotLinesAcrossSnapshots,
     hasNewSlotLines,
+    hasNewSlotLinesAcrossSnapshots,
+    summarizeObservedSlotSnapshots,
     shouldNotifyForRefresh,
   };
 

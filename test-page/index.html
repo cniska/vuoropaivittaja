@@ -573,6 +573,11 @@
         renderList(rejectedSlotList, state.rejectedSlots, "rejected", "Hylättyjä vuoroja ei vielä ole.");
       }
 
+      function insertSlotAtRandomPosition(list, slot) {
+        const index = Math.floor(Math.random() * (list.length + 1));
+        list.splice(index, 0, slot);
+      }
+
       function queueIncomingSlot() {
         const next = state.upcomingSlots.shift();
         if (!next) {
@@ -599,7 +604,9 @@
           slot.flash = "added";
         }
 
-        state.newSlots.unshift(...queued);
+        for (const slot of queued) {
+          insertSlotAtRandomPosition(state.newSlots, slot);
+        }
 
         for (const slot of queued) {
           window.setTimeout(() => {

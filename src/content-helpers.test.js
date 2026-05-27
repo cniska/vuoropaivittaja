@@ -6,7 +6,10 @@ const {
   snapshotsAreEqual,
   parseSlotText,
   findNewSlotLines,
+  findNewSlotLinesAcrossSnapshots,
   hasNewSlotLines,
+  hasNewSlotLinesAcrossSnapshots,
+  summarizeObservedSlotSnapshots,
   shouldNotifyForRefresh,
 } = require("./content-helpers.js");
 
@@ -124,6 +127,58 @@ test("hasNewSlotLines ignores removals and reordering", () => {
   assert.equal(hasNewSlotLines(oldSlots, withNewSlot), true);
 });
 
+test("findNewSlotLinesAcrossSnapshots catches slots that appear on a later poll", () => {
+  const oldSlots = [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Tiistai 2.6.2026 08:00–16:00",
+  ];
+  const snapshots = [
+    ["Maanantai 1.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+    [
+      "Keskiviikko 3.6.2026 08:00–16:00",
+      "Torstai 4.6.2026 08:00–16:00",
+      "Maanantai 1.6.2026 08:00–16:00",
+    ],
+  ];
+
+  assert.deepEqual(findNewSlotLinesAcrossSnapshots(oldSlots, snapshots), [
+    "Keskiviikko 3.6.2026 08:00–16:00",
+    "Torstai 4.6.2026 08:00–16:00",
+  ]);
+  assert.equal(hasNewSlotLinesAcrossSnapshots(oldSlots, snapshots), true);
+  assert.deepEqual(findNewSlotLinesAcrossSnapshots(oldSlots, []), []);
+});
+
+test("summarizeObservedSlotSnapshots resolves a slow-rendering refresh", () => {
+  const beforeSlots = [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Tiistai 2.6.2026 08:00–16:00",
+  ];
+  const observedSlotSnapshots = [
+    ["Maanantai 1.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+  ];
+
+  const summary = summarizeObservedSlotSnapshots(
+    beforeSlots,
+    observedSlotSnapshots
+  );
+
+  assert.deepEqual(summary.newSlotLines, ["Keskiviikko 3.6.2026 08:00–16:00"]);
+  assert.deepEqual(summary.afterSlots, [
+    "Maanantai 1.6.2026 08:00–16:00",
+    "Keskiviikko 3.6.2026 08:00–16:00",
+  ]);
+  assert.deepEqual(summary.slotSnapshots, [
+    ["Maanantai 1.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+    ["Maanantai 1.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+  ]);
+  assert.equal(summary.stabilized, true);
+});
+
 test("shouldNotifyForRefresh ignores removals and reordering when a list selector exists", () => {
   const beforeSnapshot = [
     "Maanantai\n1.6.\n08:00–16:00",
@@ -132,8 +187,9 @@ test("shouldNotifyForRefresh ignores removals and reordering when a list selecto
   const reorderedSnapshot = beforeSnapshot.slice().reverse();
   const removalSnapshot = [beforeSnapshot[0]];
   const newSlotSnapshot = [
-    "Tiistai\n2.6.\n08:00–16:00",
     "Keskiviikko\n3.6.\n08:00–16:00",
+    "Maanantai\n1.6.\n08:00–16:00",
+    "Tiistai\n2.6.\n08:00–16:00",
   ];
 
   assert.equal(
@@ -161,7 +217,11 @@ test("shouldNotifyForRefresh ignores removals and reordering when a list selecto
       beforeSnapshot,
       newSlotSnapshot,
       ["Maanantai 1.6.2026 08:00–16:00", "Tiistai 2.6.2026 08:00–16:00"],
-      ["Tiistai 2.6.2026 08:00–16:00", "Keskiviikko 3.6.2026 08:00–16:00"],
+      [
+        "Keskiviikko 3.6.2026 08:00–16:00",
+        "Maanantai 1.6.2026 08:00–16:00",
+        "Tiistai 2.6.2026 08:00–16:00",
+      ],
       true
     ),
     true

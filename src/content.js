@@ -12,8 +12,16 @@ if (!globalThis.__vuoropaivittajaLoaded) {
     isContextInvalidated,
     STRINGS,
   } = globalThis.VuoropaivittajaShared;
-  const { shouldStartMonitoring, parseSlotText, shouldNotifyForRefresh } =
-    globalThis.VuoropaivittajaContentHelpers;
+  const {
+    shouldStartMonitoring,
+    parseSlotText,
+    findNewSlotLines,
+    shouldNotifyForRefresh,
+    summarizeObservedSlotSnapshots,
+  } = globalThis.VuoropaivittajaContentHelpers;
+
+  const POST_REFRESH_POLL_INTERVAL_MS = 500;
+  const POST_REFRESH_TIMEOUT_MS = 5000;
 
   let lastUrl = location.href;
   let pickerState = null;
@@ -224,35 +232,47 @@ if (!globalThis.__vuoropaivittajaLoaded) {
         })
         .catch(() => {});
 
-      await delay(1500);
+      const postRefresh = await observePostRefresh(
+        rule.listSelector,
+        session,
+        beforeSlots,
+        (newSlotLines) => {
+          logger.info("Snapshot change detected", {
+            event: "change-detected",
+            session,
+            notifications: settings.notifications,
+            sound: settings.sound,
+            newSlots: newSlotLines.length,
+          });
+          fireChangeNotification(settings);
+        }
+      );
       if (monitoringSession !== session) break;
 
-      const after = takeSnapshot(rule.listSelector);
-      const afterSlots = rule.listSelector
-        ? snapshotListItems(rule.listSelector)
-        : [];
+      const after = postRefresh.after;
+      const afterSlots = postRefresh.afterSlots;
+      const effectiveAfterSlots =
+        afterSlots.length > 0 ? afterSlots : beforeSlots;
 
-      if (rule.listSelector) {
-        if (afterSlots.length > 0) {
-          void chrome.runtime
-            .sendMessage({
-              type: "update-slot-history",
-              urlPattern: rule.urlPattern,
-              slots: afterSlots,
-            })
-            .catch(() => {});
-        }
+      if (rule.listSelector && afterSlots.length > 0) {
+        void chrome.runtime
+          .sendMessage({
+            type: "update-slot-history",
+            urlPattern: rule.urlPattern,
+            slots: afterSlots,
+          })
+          .catch(() => {});
       }
 
       const hasNewSlots = shouldNotifyForRefresh(
         before,
         after,
         beforeSlots,
-        afterSlots,
+        effectiveAfterSlots,
         Boolean(rule.listSelector)
       );
 
-      if (hasNewSlots) {
+      if (!rule.listSelector && hasNewSlots) {
         logger.info("Snapshot change detected", {
           event: "change-detected",
           session,
@@ -320,6 +340,76 @@ if (!globalThis.__vuoropaivittajaLoaded) {
       }
     }
     return [document.body.innerText];
+  }
+
+  async function observePostRefresh(
+    listSelector,
+    session,
+    beforeSlots,
+    onNewSlotLines
+  ) {
+    if (!listSelector) {
+      await delay(1500);
+      return {
+        after: takeSnapshot(listSelector),
+        afterSlots: [],
+        newSlotLines: [],
+        slotSnapshots: [],
+        alerted: false,
+      };
+    }
+
+    const observedSlotSnapshots = [];
+    const timeoutAt = Date.now() + POST_REFRESH_TIMEOUT_MS;
+    let after = takeSnapshot(listSelector);
+    let afterSlots = listSelector ? snapshotListItems(listSelector) : [];
+    let alerted = false;
+
+    while (Date.now() < timeoutAt && monitoringSession === session) {
+      await delay(POST_REFRESH_POLL_INTERVAL_MS);
+      if (monitoringSession !== session) {
+        break;
+      }
+
+      after = takeSnapshot(listSelector);
+      afterSlots = listSelector ? snapshotListItems(listSelector) : [];
+
+      if (listSelector && afterSlots.length > 0) {
+        observedSlotSnapshots.push(afterSlots);
+      }
+
+      if (!alerted) {
+        const currentNewSlotLines = findNewSlotLines(beforeSlots, afterSlots);
+        if (currentNewSlotLines.length > 0) {
+          alerted = true;
+          if (typeof onNewSlotLines === "function") {
+            onNewSlotLines(currentNewSlotLines);
+          }
+        }
+      }
+
+      const summary = summarizeObservedSlotSnapshots(
+        beforeSlots,
+        observedSlotSnapshots
+      );
+
+      if (summary.stabilized) {
+        break;
+      }
+    }
+
+    const summary = summarizeObservedSlotSnapshots(
+      beforeSlots,
+      observedSlotSnapshots
+    );
+
+    return {
+      after,
+      afterSlots: summary.afterSlots,
+      newSlotLines: summary.newSlotLines,
+      slotSnapshots: summary.slotSnapshots,
+      alerted,
+    };
   }
 
   function randomInterval(min, max) {
